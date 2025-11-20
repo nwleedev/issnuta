@@ -197,10 +197,7 @@ e2e/har/*.har
 # SvelteKit build / generate output
 .svelte-kit
 
-public/translations/
-public/kuromoji/
-public/wasm/
+public/storage/*/models/
 design-templates/
 temps/
-storage/
 scripts/
