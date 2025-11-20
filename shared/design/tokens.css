@@ -1,0 +1,52 @@
+/* Design Tokens — Issnuta (mobile web)
+   Scope: color, surfaces, radius, shadow, focus. OKLCH-first. */
+
+:root {
+  /* Respect system preference; apps may override via data-theme. */
+  color-scheme: light dark;
+
+  /* Brand palette */
+  --primary: #22d3ee;   /* cyan-400 */
+  --secondary: #a3a3a3; /* neutral-400 */
+  --accent: #f59e0b;    /* amber-500 */
+  --neutral: #1f2937;   /* gray-800 */
+  --base-100: #0b0f14;  /* dark base */
+
+  /* Surfaces */
+  --surface: oklch(98% 0 0);
+  --surface-1: color-mix(in oklab, var(--base-100), white 6%);
+  --surface-2: color-mix(in oklab, var(--base-100), white 12%);
+
+  /* Text */
+  --text-strong: oklch(22% 0.02 250);
+  --text-muted: oklch(45% 0.02 250);
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  /* Shadows */
+  --shadow-1: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --shadow-2: 0 2px 10px rgba(0, 0, 0, 0.12);
+  --shadow-3: 0 10px 24px rgba(0, 0, 0, 0.16);
+
+  /* Focus */
+  --focus-ring: #000;
+  --focus-halo: #ffd500; /* approx #fd0 */
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: oklch(18% 0.02 250);
+    --text-strong: oklch(92% 0 0);
+    --surface-1: color-mix(in oklab, var(--base-100), white 4%);
+    --surface-2: color-mix(in oklab, var(--base-100), white 10%);
+  }
+}
+
+/* Optional aliases (non-breaking with Tailwind/DaisyUI) */
+:root {
+  --btn-radius: var(--radius-md);
+}
+
