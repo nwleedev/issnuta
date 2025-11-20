@@ -1,5 +1,9 @@
-import { FEEDS_KEY, type FeedItem } from "@/shared/lib/feeds-storage";
-import { useLocalStorage } from "@uidotdev/usehooks";
+import {
+  useLocalTranslations,
+  useDeleteTranslation,
+  useToggleFavoriteTranslation,
+} from "@/features/feeds/model/useLocalTranslations";
+import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
 import { Copy, Star, Trash2 } from "lucide-react";
 import * as React from "react";
 
@@ -10,9 +14,31 @@ export interface FeedsEntryProps {
 
 const FeedsEntry = (props: FeedsEntryProps) => {
   const { search, filter } = props;
-  const [feeds, setFeeds] = useLocalStorage<FeedItem[]>(FEEDS_KEY, []);
+  React.useEffect(() => {
+    void migrateFeedsToIndexedDBOnce();
+  }, []);
+  const { data: translations = [], isLoading } = useLocalTranslations();
+  const deleteMutation = useDeleteTranslation();
+  const toggleFavoriteMutation = useToggleFavoriteTranslation();
+
+  const feeds = React.useMemo(
+    () =>
+      translations.map((t) => ({
+        id: t.id,
+        input: t.input,
+        primary: t.direction === "koja" ? t.outputs.ja : t.outputs.ko,
+        crossCheck: t.direction === "koja" ? t.outputs.en : undefined,
+        fromLang: t.direction === "koja" ? "ko" : "ja",
+        toLang: t.direction === "koja" ? "ja" : "ko",
+        createdAt: t.createdAt,
+        isFavorite: t.isFavorite ?? false,
+      })),
+    [translations]
+  );
 
   const filteredFeeds = React.useMemo(() => {
+    if (isLoading) return [];
+
     let items =
       filter === "favorites" ? feeds.filter((item) => item.isFavorite) : feeds;
 
@@ -30,15 +56,13 @@ const FeedsEntry = (props: FeedsEntryProps) => {
   }, [feeds, filter, search]);
 
   const handleDelete = (id: string) => {
-    setFeeds(feeds.filter((item) => item.id !== id));
+    deleteMutation.mutate(id);
   };
 
   const handleToggleFavorite = (id: string) => {
-    setFeeds(
-      feeds.map((item) =>
-        item.id === id ? { ...item, isFavorite: !item.isFavorite } : item
-      )
-    );
+    const current = feeds.find((item) => item.id === id);
+    const next = !(current?.isFavorite ?? false);
+    toggleFavoriteMutation.mutate({ id, isFavorite: next });
   };
 
   const handleCopy = (text: string) => {
@@ -51,7 +75,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
   };
   return (
     <section className="flex-1 px-5 pb-6">
-      {filteredFeeds.length === 0 ? (
+      {isLoading ? (
+        <p className="mt-8 text-center text-sm text-[#6b6b60]">
+          불러오는 중…
+        </p>
+      ) : filteredFeeds.length === 0 ? (
         <p className="mt-8 text-center text-sm text-[#6b6b60]">
           아직 저장된 번역이 없습니다.
         </p>

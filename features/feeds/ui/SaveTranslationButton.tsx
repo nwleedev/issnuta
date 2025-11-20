@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  FEEDS_KEY,
-  type FeedItem,
-  type FeedLang,
-} from "@/shared/lib/feeds-storage";
+import { useSaveTranslation } from "@/features/feeds/model/useLocalTranslations";
 import { Button } from "@/shared/ui/button";
-import { useLocalStorage } from "@uidotdev/usehooks";
 import * as React from "react";
 
 export type SaveTranslationButtonProps = {
@@ -22,7 +17,7 @@ export default function SaveTranslationButton({
   outputs,
   className,
 }: SaveTranslationButtonProps) {
-  const [feeds, setFeeds] = useLocalStorage<FeedItem[]>(FEEDS_KEY, []);
+  const saveMutation = useSaveTranslation();
   const [saved, setSaved] = React.useState(false);
 
   const handleSave = React.useCallback(() => {
@@ -32,26 +27,17 @@ export default function SaveTranslationButton({
     const primary = direction === "koja" ? outputs.ja : outputs.ko;
     if (!primary.trim()) return;
 
-    const crossCheck =
-      direction === "koja" ? outputs.en || undefined : undefined;
-
-    const fromLang: FeedLang = direction === "koja" ? "ko" : "ja";
-    const toLang: FeedLang = direction === "koja" ? "ja" : "ko";
-
-    const newItem: FeedItem = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      input: trimmedInput,
-      primary,
-      crossCheck,
-      fromLang,
-      toLang,
-      createdAt: Date.now(),
-      isFavorite: false,
-    };
-
     setSaved(true);
-    setFeeds([...feeds, newItem]);
-  }, [input, direction, outputs, feeds, setFeeds]);
+    try {
+      saveMutation.mutate({
+        input: trimmedInput,
+        direction,
+        outputs,
+      });
+    } catch {
+      // noop
+    }
+  }, [direction, input, outputs, saveMutation]);
 
   const disabled =
     !input.trim() ||
