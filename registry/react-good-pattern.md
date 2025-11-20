@@ -11,6 +11,9 @@
 - `useRef`는 초기값에 따라 `RefObject<T | null>` 또는 `useRef<T|null>(null)`로 선언.
 - 유니온 분기에는 판별 속성(discriminated union)을 사용해 안전한 스위칭.
 - 공용 유틸은 `shared/lib`, 타입은 `shared/types`, 상수는 `shared/config`에 배치.
+- React import 스타일:
+  - **새로 작성하는 코드에서는** `import { useState, useEffect } from "react";` 처럼 **named import**를 기본으로 사용합니다.
+  - `import * as React from "react"` 및 `import React from "react"` 형태는 **사용하지 않습니다**. (기존 예시 코드에는 남아 있을 수 있지만, 새로운 구현에서는 따라 쓰지 않습니다.)
 
 ## 2) 컴포넌트 구조/FSD 정렬
 
