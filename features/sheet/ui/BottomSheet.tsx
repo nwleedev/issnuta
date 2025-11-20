@@ -1,5 +1,6 @@
 "use client";
-import * as React from "react";
+import type { ReactNode } from "react";
+import { useCallback } from "react";
 import { Button } from "@/shared/ui/button";
 import {
   Sheet,
@@ -12,9 +13,9 @@ import {
 } from "@/shared/ui/sheet";
 
 export type BottomSheetProps = {
-  title?: React.ReactNode;
-  trigger?: React.ReactNode;
-  children?: React.ReactNode;
+  title?: ReactNode;
+  trigger?: ReactNode;
+  children?: ReactNode;
   className?: string;
   onOpen?: () => void;
   onClose?: () => void;
@@ -36,7 +37,7 @@ export default function BottomSheet({
   onClose,
   closeLabel = "닫기",
 }: BottomSheetProps) {
-  const handleOpenChange = React.useCallback(
+  const handleOpenChange = useCallback(
     (open: boolean) => {
       if (open) onOpen?.();
       else onClose?.();

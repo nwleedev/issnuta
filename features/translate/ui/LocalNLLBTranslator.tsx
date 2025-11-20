@@ -13,7 +13,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useMutationState } from "@tanstack/react-query";
 import { ArrowLeftRight, Copy, RotateCcw, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import * as React from "react";
+import {
+  Fragment,
+  useCallback,
+  useRef,
+  useState,
+} from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -50,7 +55,7 @@ const SaveTranslationButton = dynamic(
     import("@/features/feeds/ui/SaveTranslationButton").then((m) => m.default),
   {
     ssr: false,
-    loading: () => <React.Fragment />,
+    loading: () => <Fragment />,
   }
 );
 
@@ -74,13 +79,13 @@ export function LocalNLLBTranslator() {
   const { register, handleSubmit, setValue, formState } = form;
   const direction = useWatch({ control: form.control, name: "direction" });
   const input = useWatch({ control: form.control, name: "input" });
-  const inputRef = React.useRef<HTMLTextAreaElement | null>(null);
-  const [copied, setCopied] = React.useState<"in" | "out" | null>(null);
-  const [globalError, setGlobalError] = React.useState<string | null>(null);
-  const [slow, setSlow] = React.useState(false); // 장기 지연 안내 플래그
-  const [offlineOpen, setOfflineOpen] = React.useState(false);
-  const retryRef = React.useRef<(() => Promise<void>) | null>(null);
-  const slowTimerRef = React.useRef<number | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const [copied, setCopied] = useState<"in" | "out" | null>(null);
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [slow, setSlow] = useState(false); // 장기 지연 안내 플래그
+  const [offlineOpen, setOfflineOpen] = useState(false);
+  const retryRef = useRef<(() => Promise<void>) | null>(null);
+  const slowTimerRef = useRef<number | null>(null);
 
   const { ref: inputFieldRef, ...inputFieldProps } = register("input", {
     setValueAs: (v) => (typeof v === "string" ? v : ""),
@@ -220,55 +225,61 @@ export function LocalNLLBTranslator() {
   const derivedGlobalErrorFromData =
     translateMutation.data?.globalError ?? null;
 
-  async function handleTranslate({
-    input,
-    direction,
-    showCrosscheck,
-  }: FormValues): Promise<void> {
-    // 모바일: 번역 시작 시 입력 포커스를 제거하여 키보드를 닫습니다.
-    try {
-      inputRef.current?.blur();
-    } catch {}
-    setGlobalError(null);
-    if (!input.trim()) return;
-    const attempt = async () => {
+  const handleTranslate = useCallback(
+    async ({
+      input,
+      direction,
+      showCrosscheck,
+    }: FormValues): Promise<void> => {
+      // 모바일: 번역 시작 시 입력 포커스를 제거하여 키보드를 닫습니다.
       try {
-        setSlow(false);
-        // 12초 경과 시 장기 지연 안내 플래그 on
+        inputRef.current?.blur();
+      } catch {}
+      setGlobalError(null);
+      if (!input.trim()) return;
+      const attempt = async () => {
         try {
-          slowTimerRef.current = window.setTimeout(() => setSlow(true), 12_000);
-        } catch {}
-        await translateMutation.mutateAsync({
-          input,
-          direction,
-          showCrosscheck,
-        });
-      } catch (e: unknown) {
-        if (
-          e instanceof PrefetchRequiredError ||
-          (e as any)?.code === "OFFLINE_PREFETCH_REQUIRED"
-        ) {
-          // 오프라인에서 필수 리소스가 캐시에 없음 → 프리페치 유도
-          // 완료 후 최신 폼값으로 재시도
-          retryRef.current = onSubmit;
-          setOfflineOpen(true);
-          return;
-        }
-        const message = mapErrorToMessage(e);
-        setGlobalError(message);
-      } finally {
-        if (slowTimerRef.current) {
+          setSlow(false);
+          // 12초 경과 시 장기 지연 안내 플래그 on
           try {
-            window.clearTimeout(slowTimerRef.current);
+            slowTimerRef.current = window.setTimeout(
+              () => setSlow(true),
+              12_000
+            );
           } catch {}
-          slowTimerRef.current = null;
+          await translateMutation.mutateAsync({
+            input,
+            direction,
+            showCrosscheck,
+          });
+        } catch (e: unknown) {
+          if (
+            e instanceof PrefetchRequiredError ||
+            (e as any)?.code === "OFFLINE_PREFETCH_REQUIRED"
+          ) {
+            // 오프라인에서 필수 리소스가 캐시에 없음 → 프리페치 유도
+            // 완료 후 최신 폼값으로 재시도
+            retryRef.current = onSubmit;
+            setOfflineOpen(true);
+            return;
+          }
+          const message = mapErrorToMessage(e);
+          setGlobalError(message);
+        } finally {
+          if (slowTimerRef.current) {
+            try {
+              window.clearTimeout(slowTimerRef.current);
+            } catch {}
+            slowTimerRef.current = null;
+          }
+          setSlow(false);
         }
-        setSlow(false);
-      }
-    };
+      };
 
-    await attempt();
-  }
+      await attempt();
+    },
+    [inputRef, setGlobalError, setSlow, translateMutation, retryRef, setOfflineOpen, slowTimerRef]
+  );
 
   const onSubmit = handleSubmit(handleTranslate);
 

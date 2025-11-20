@@ -1,9 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import * as React from "react";
+import type { ReactNode } from "react";
 
-type Item = { href: string; label: string; icon?: React.ReactNode; match?: (path: string) => boolean };
+type Item = {
+  href: string;
+  label: string;
+  icon?: ReactNode;
+  match?: (path: string) => boolean;
+};
 
 export type BottomNavProps = {
   items?: Item[];

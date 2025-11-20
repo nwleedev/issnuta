@@ -1,11 +1,11 @@
 "use client";
 import { AppDrawer } from "@/features/shell/ui/AppDrawer";
-import * as React from "react";
+import type { ReactNode } from "react";
 
 export type TopAppBarProps = {
-  title?: React.ReactNode;
-  leading?: React.ReactNode;
-  trailing?: React.ReactNode;
+  title?: ReactNode;
+  leading?: ReactNode;
+  trailing?: ReactNode;
   className?: string;
 };
 

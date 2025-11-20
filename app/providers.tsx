@@ -2,10 +2,10 @@
 
 import { getQueryClient } from "@/shared/lib/query/client";
 import { QueryClientProvider } from "@tanstack/react-query";
-import * as React from "react";
+import type { ReactNode } from "react";
 
 type AppProvidersProps = {
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export function AppProviders({ children }: AppProvidersProps) {

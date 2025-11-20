@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import { NLLB_MODEL_ID } from "@/shared/lib/translator";
 import { isOfflineReadyForModel } from "@/features/offline/check";
 
@@ -15,12 +15,12 @@ export type OfflineModelReadyState = {
  * - checked: 비동기 점검이 한 번 이상 완료되었는지 여부
  */
 export function useOfflineModelReady(): OfflineModelReadyState {
-  const [state, setState] = React.useState<OfflineModelReadyState>({
+  const [state, setState] = useState<OfflineModelReadyState>({
     ready: false,
     checked: false,
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     let cancelled = false;
 
     (async () => {
@@ -43,4 +43,3 @@ export function useOfflineModelReady(): OfflineModelReadyState {
 
   return state;
 }
-

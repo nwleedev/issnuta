@@ -1,5 +1,6 @@
 "use client";
-import * as React from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import {
@@ -38,15 +39,15 @@ export default function PhraseForm({
   disabled,
   className,
 }: PhraseFormProps) {
-  const [category, setCategory] = React.useState(
+  const [category, setCategory] = useState(
     defaultValues?.category ?? categories[0] ?? ""
   );
-  const [source, setSource] = React.useState(defaultValues?.source ?? "");
-  const [target, setTarget] = React.useState(defaultValues?.target ?? "");
-  const [error, setError] = React.useState<string | null>(null);
-  const [busy, setBusy] = React.useState(false);
+  const [source, setSource] = useState(defaultValues?.source ?? "");
+  const [target, setTarget] = useState(defaultValues?.target ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (disabled || busy) return;
     // 간단 검증

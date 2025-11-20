@@ -22,7 +22,6 @@
 
 ```tsx
 "use client";
-import * as React from "react";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
@@ -148,7 +147,9 @@ export function EditImageForm({ id }: { id: string }) {
   const methods = useForm<EditForm>({
     defaultValues: async () => {
       // 1) 서버 Hydration으로 채워진 캐시를 먼저 시도
-      const cached = qc.getQueryData<Awaited<ReturnType<typeof fetchSavedImageById>>>(imageKeys.byId(id));
+      const cached = qc.getQueryData<
+        Awaited<ReturnType<typeof fetchSavedImageById>>
+      >(imageKeys.byId(id));
       if (cached) return toForm(cached);
       // 2) 없으면 ensureQueryData로 보강
       const dto = await qc.ensureQueryData({

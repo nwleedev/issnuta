@@ -3,7 +3,7 @@
 import TopAppBar from "@/features/shell/ui/TopAppBar";
 import { Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import * as React from "react";
+import { useState } from "react";
 
 const FeedsEntry = dynamic(
   () => import("@/entries/feeds/FeedsEntry").then((mod) => mod.default),
@@ -13,8 +13,8 @@ const FeedsEntry = dynamic(
 );
 
 export default function FeedsPage() {
-  const [search, setSearch] = React.useState("");
-  const [filter, setFilter] = React.useState<"all" | "favorites">("all");
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "favorites">("all");
 
   return (
     <main className="min-h-dvh bg-[#fafaf7]">

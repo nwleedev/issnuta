@@ -5,7 +5,7 @@ import {
 } from "@/features/feeds/model/useLocalTranslations";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
 import { Copy, Star, Trash2 } from "lucide-react";
-import * as React from "react";
+import { useEffect, useMemo } from "react";
 
 export interface FeedsEntryProps {
   search: string;
@@ -14,14 +14,14 @@ export interface FeedsEntryProps {
 
 const FeedsEntry = (props: FeedsEntryProps) => {
   const { search, filter } = props;
-  React.useEffect(() => {
+  useEffect(() => {
     void migrateFeedsToIndexedDBOnce();
   }, []);
   const { data: translations = [], isLoading } = useLocalTranslations();
   const deleteMutation = useDeleteTranslation();
   const toggleFavoriteMutation = useToggleFavoriteTranslation();
 
-  const feeds = React.useMemo(
+  const feeds = useMemo(
     () =>
       translations.map((t) => ({
         id: t.id,
@@ -36,7 +36,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
     [translations]
   );
 
-  const filteredFeeds = React.useMemo(() => {
+  const filteredFeeds = useMemo(() => {
     if (isLoading) return [];
 
     let items =

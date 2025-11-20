@@ -1,5 +1,6 @@
 "use client";
-import * as React from "react";
+import type { FormEvent } from "react";
+import { useState } from "react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
 import {
@@ -35,7 +36,7 @@ export type OptionsFormProps = {
  * - 실제 저장 연동은 상위 onSubmit에서 처리
  */
 export default function OptionsForm({ initial, onSubmit, className, disabled }: OptionsFormProps) {
-  const [values, setValues] = React.useState<OptionsFormValues>({
+  const [values, setValues] = useState<OptionsFormValues>({
     defaultDirection: initial?.defaultDirection ?? "koja",
     autoCopy: initial?.autoCopy ?? false,
     amount: initial?.amount ?? "",
@@ -45,14 +46,14 @@ export default function OptionsForm({ initial, onSubmit, className, disabled }: 
     query: initial?.query ?? "",
     username: initial?.username ?? "",
   });
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
-  const [busy, setBusy] = React.useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
 
   function patch<K extends keyof OptionsFormValues>(key: K, v: OptionsFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: v }));
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (disabled || busy) return;
     const nextErr: Record<string, string> = {};

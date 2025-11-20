@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useOfflineModelReady } from "@/features/offline/useOfflineModelReady";
 import { cn } from "@/shared/lib/utils";
 
@@ -34,4 +33,3 @@ export default function OfflineReadyNotice({
     </p>
   );
 }
-

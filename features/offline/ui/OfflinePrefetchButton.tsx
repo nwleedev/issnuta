@@ -8,7 +8,7 @@ import {
 } from "@/features/offline/prefetch";
 import { buildAllURLs, getBaseURL } from "@/features/offline/urls";
 import { NLLB_MODEL_ID } from "@/shared/lib/translator";
-import * as React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export type OfflinePrefetchButtonProps = {
   modelId?: string;
@@ -40,16 +40,16 @@ export default function OfflinePrefetchButton({
   className,
   label,
 }: OfflinePrefetchButtonProps) {
-  const [ready, setReady] = React.useState(false);
-  const [running, setRunning] = React.useState(false);
-  const [progress, setProgress] = React.useState<Progress | null>(null);
-  const [estimate, setEstimate] = React.useState<ByteInfo>({ done: 0 });
-  const [error, setError] = React.useState<string | null>(null);
-  const [allFailed, setAllFailed] = React.useState(false);
-  const abortRef = React.useRef<AbortController | null>(null);
+  const [ready, setReady] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState<Progress | null>(null);
+  const [estimate, setEstimate] = useState<ByteInfo>({ done: 0 });
+  const [error, setError] = useState<string | null>(null);
+  const [allFailed, setAllFailed] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   // 초기 준비 상태 확인
-  React.useEffect(() => {
+  useEffect(() => {
     let mounted = true;
     (async () => {
       try {
@@ -64,7 +64,7 @@ export default function OfflinePrefetchButton({
     };
   }, [modelId]);
 
-  const confirmIfMetered = React.useCallback(() => {
+  const confirmIfMetered = useCallback(() => {
     try {
       const c: any = (navigator as any).connection;
       const metered =
@@ -77,7 +77,7 @@ export default function OfflinePrefetchButton({
     return true;
   }, []);
 
-  const onStart = React.useCallback(async () => {
+  const onStart = useCallback(async () => {
     setError(null);
     setAllFailed(false);
     // 환경 확인
@@ -146,7 +146,7 @@ export default function OfflinePrefetchButton({
     }
   }, [modelId, confirmIfMetered]);
 
-  const onCancel = React.useCallback(() => {
+  const onCancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
     setRunning(false);

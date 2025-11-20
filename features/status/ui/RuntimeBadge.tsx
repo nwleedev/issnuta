@@ -1,5 +1,5 @@
 "use client";
-import * as React from "react";
+import { useEffect, useState } from "react";
 
 type Backend = "webgpu" | "wasm";
 
@@ -20,9 +20,9 @@ function detectBackend(): Backend {
 }
 
 export function RuntimeBadge({ force, className }: RuntimeBadgeProps) {
-  const [backend, setBackend] = React.useState<Backend>(force ?? "wasm");
+  const [backend, setBackend] = useState<Backend>(force ?? "wasm");
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (force) return; // 외부 강제값 우선
     setBackend(detectBackend());
   }, [force]);

@@ -6,7 +6,7 @@
 // 을 제외한 "비동기 상태 머신" 부분만 로컬 훅으로 구현한 버전입니다.
 // 여러 기능에서 재사용 가능한 형태를 목표로 합니다.
 
-import * as React from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 
 export type LocalMutationStatus = "idle" | "pending" | "success" | "error";
 
@@ -84,7 +84,7 @@ export function useLocalMutation<
   TError = unknown,
   TVariables = void
 >(options: UseLocalMutationOptions<TData, TError, TVariables>) {
-  const [state, dispatch] = React.useReducer(
+  const [state, dispatch] = useReducer(
     localMutationReducer as (
       state: LocalMutationState<TData, TError, TVariables>,
       action: LocalMutationAction<TData, TError, TVariables>
@@ -102,16 +102,16 @@ export function useLocalMutation<
 
   // 한국어 주석: 여러 번 mutate를 호출했을 때
   // - 가장 마지막 호출만 유효하게 만들기 위한 id입니다.
-  const currentIdRef = React.useRef(0);
-  const isMountedRef = React.useRef(true);
+  const currentIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       isMountedRef.current = false;
     };
   }, []);
 
-  const mutateAsync = React.useCallback(
+  const mutateAsync = useCallback(
     async (variables: TVariables) => {
       const id = ++currentIdRef.current;
       dispatch({ type: "start", variables });
@@ -144,7 +144,7 @@ export function useLocalMutation<
     [mutationFn, onSuccess, onError, onSettled]
   );
 
-  const mutate = React.useCallback(
+  const mutate = useCallback(
     (
       variables: TVariables,
       callbacks?: {
@@ -170,7 +170,7 @@ export function useLocalMutation<
     [mutateAsync]
   );
 
-  const reset = React.useCallback(() => {
+  const reset = useCallback(() => {
     // 한국어 주석: reset 시 이전 요청들이 나중에 resolve되더라도
     // 상태를 덮어쓰지 않도록 id를 증가시킵니다.
     currentIdRef.current++;

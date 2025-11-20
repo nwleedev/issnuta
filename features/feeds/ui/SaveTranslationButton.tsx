@@ -2,7 +2,7 @@
 
 import { useSaveTranslation } from "@/features/feeds/model/useLocalTranslations";
 import { Button } from "@/shared/ui/button";
-import * as React from "react";
+import { useCallback, useState } from "react";
 
 export type SaveTranslationButtonProps = {
   input: string;
@@ -18,9 +18,9 @@ export default function SaveTranslationButton({
   className,
 }: SaveTranslationButtonProps) {
   const saveMutation = useSaveTranslation();
-  const [saved, setSaved] = React.useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const handleSave = React.useCallback(() => {
+  const handleSave = useCallback(() => {
     const trimmedInput = input.trim();
     if (!trimmedInput) return;
 

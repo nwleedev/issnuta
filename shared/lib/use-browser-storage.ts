@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
@@ -32,7 +32,7 @@ export function useBrowserStorage<T>(
 
   const isBrowser = typeof window !== "undefined" && !!storage;
 
-  const getSnapshot = React.useCallback((): T => {
+  const getSnapshot = useCallback((): T => {
     if (!isBrowser || !storage) return initialValue;
     try {
       const raw = storage.getItem(key);
@@ -44,7 +44,7 @@ export function useBrowserStorage<T>(
     }
   }, [deserialize, initialValue, isBrowser, key, storage]);
 
-  const subscribe = React.useCallback(
+  const subscribe = useCallback(
     (callback: () => void) => {
       const listeners = getListenersForKey(key);
       listeners.add(callback);
@@ -69,13 +69,13 @@ export function useBrowserStorage<T>(
     [isBrowser, key, storage]
   );
 
-  const value = React.useSyncExternalStore(
+  const value = useSyncExternalStore(
     subscribe,
     getSnapshot,
     () => initialValue
   );
 
-  const setValue = React.useCallback(
+  const setValue = useCallback(
     (next: T) => {
       if (!isBrowser || !storage) return;
       try {
@@ -90,7 +90,7 @@ export function useBrowserStorage<T>(
     [isBrowser, key, serialize, storage]
   );
 
-  const clearValue = React.useCallback(() => {
+  const clearValue = useCallback(() => {
     if (!isBrowser || !storage) return;
     try {
       storage.removeItem(key);

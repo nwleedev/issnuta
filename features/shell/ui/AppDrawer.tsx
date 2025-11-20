@@ -3,7 +3,7 @@
 import { Clock, Home, Menu } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import * as React from "react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/shared/ui/button";
 import {
@@ -20,7 +20,7 @@ type NavItem = {
   href: string;
   label: string;
   description?: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   match?: (path: string) => boolean;
 };
 

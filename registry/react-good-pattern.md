@@ -29,7 +29,13 @@
 ```tsx
 // features/translate/ui/Translator.tsx
 "use client";
-import * as React from "react";
+import {
+  useState,
+  useContext,
+  useCallback,
+  createContext,
+  useMemo,
+} from "react";
 
 type Lang = "ko" | "en" | "ja";
 type TranslatorContextValue = {
@@ -43,26 +49,26 @@ type TranslatorContextValue = {
   translate: () => Promise<void>;
 };
 
-const TranslatorCtx = React.createContext<TranslatorContextValue | null>(null);
+const TranslatorCtx = createContext<TranslatorContextValue | null>(null);
 const useTranslator = () => {
-  const ctx = React.useContext(TranslatorCtx);
+  const ctx = useContext(TranslatorCtx);
   if (!ctx) throw new Error("Translator.* must be used within <Translator>");
   return ctx;
 };
 
 export function Translator({ children }: { children?: React.ReactNode }) {
-  const [src, setSrc] = React.useState<Lang>("ko");
-  const [tgt, setTgt] = React.useState<Lang>("en");
-  const [text, setText] = React.useState("");
-  const [result, setResult] = React.useState("");
-  const [isTranslating, setBusy] = React.useState(false);
+  const [src, setSrc] = useState<Lang>("ko");
+  const [tgt, setTgt] = useState<Lang>("en");
+  const [text, setText] = useState("");
+  const [result, setResult] = useState("");
+  const [isTranslating, setBusy] = useState(false);
 
   const swap = () => {
     setSrc(tgt);
     setTgt(src);
     setResult("");
   };
-  const translate = React.useCallback(async () => {
+  const translate = useCallback(async () => {
     if (!text.trim()) return;
     setBusy(true);
     try {
@@ -76,7 +82,7 @@ export function Translator({ children }: { children?: React.ReactNode }) {
     }
   }, [text, src, tgt]);
 
-  const value = React.useMemo(
+  const value = useMemo(
     () => ({ src, tgt, text, setText, result, isTranslating, swap, translate }),
     [src, tgt, text, result, isTranslating]
   );
@@ -180,13 +186,13 @@ export const createTranslationStore = (init?: Partial<TranslationState>) =>
 
 ```tsx
 // features/translate/model/TranslatorProvider.tsx
-import * as React from "react";
+import { useContext, ReactNode, createContext, useRef } from "react";
 import { createTranslationStore, TranslationStore } from "@/shared/lib/store";
 import { useStore } from "zustand";
 
-const Ctx = React.createContext<TranslationStore | null>(null);
+const Ctx = createContext<TranslationStore | null>(null);
 export const useTranslationStore = <T,>(sel: (s: unknown) => T) => {
-  const api = React.useContext(Ctx);
+  const api = useContext(Ctx);
   if (!api)
     throw new Error(
       "useTranslationStore must be used within <TranslatorProvider>"
@@ -194,12 +200,8 @@ export const useTranslationStore = <T,>(sel: (s: unknown) => T) => {
   return useStore(api, sel);
 };
 
-export function TranslatorProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const storeRef = React.useRef<TranslationStore>();
+export function TranslatorProvider({ children }: { children: ReactNode }) {
+  const storeRef = useRef<TranslationStore>();
   if (!storeRef.current) storeRef.current = createTranslationStore();
   return <Ctx.Provider value={storeRef.current}>{children}</Ctx.Provider>;
 }
@@ -216,7 +218,7 @@ export function TranslatorProvider({
 
 ```ts
 // shared/lib/useControllableState.ts
-import * as React from "react";
+import { useState, useCallback } from "react";
 
 type Params<T> = { value?: T; defaultValue?: T; onChange?: (v: T) => void };
 export function useControllableState<T>({
@@ -224,10 +226,10 @@ export function useControllableState<T>({
   defaultValue,
   onChange,
 }: Params<T>) {
-  const [uncontrolled, setUnc] = React.useState<T | undefined>(defaultValue);
+  const [uncontrolled, setUnc] = useState<T | undefined>(defaultValue);
   const isCtrl = value !== undefined;
   const state = isCtrl ? (value as T) : (uncontrolled as T);
-  const setState = React.useCallback(
+  const setState = useCallback(
     (v: T) => {
       if (!isCtrl) setUnc(v);
       onChange?.(v);
@@ -274,10 +276,10 @@ export function useSwapLanguages<T extends string>() {
 
 ```ts
 // shared/lib/useDebounced.ts
-import * as React from "react";
+import { useState, useEffect } from "react";
 export function useDebounced<T>(value: T, delay = 300) {
-  const [v, setV] = React.useState(value);
-  React.useEffect(() => {
+  const [v, setV] = useState(value);
+  useEffect(() => {
     const t = setTimeout(() => setV(value), delay);
     return () => clearTimeout(t);
   }, [value, delay]);
