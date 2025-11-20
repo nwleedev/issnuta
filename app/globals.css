@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@plugin "daisyui";
+@import "../shared/design/tokens.css";
+
+/* Bind defaults to design tokens */
+@theme inline {
+  --color-background: var(--surface);
+  --color-foreground: var(--text-strong);
+}
+
+body {
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+/* Templates token + animation utilities (imported last to win cascade) */
+@import "../shared/design/templates.tokens.css";
+@import "tw-animate-css";
+
+/* Warm Minimalist token overrides (design-templates → project)
+   - Single-file change to respect AGENTS.md (one file per step)
+   - Declared after templates.tokens.css to win the cascade
+*/
+:root {
+  /* Brand / accents */
+  --brand-primary: #5a4a3a;
+  --brand-primary-hover: #4a3a2a;
+  --brand-accent: #c17a4f;
+
+  /* Surfaces */
+  --surface-primary: #fafaf7; /* warm white */
+  --surface-secondary: #f5f5f0; /* light beige */
+  --surface-input: #ffffff;
+  --surface-warm: #fef9f3; /* peach‑tinted */
+
+  /* Text */
+  --text-primary: #2d2d28;      /* warm charcoal */
+  --text-secondary: #6b6b60;    /* warm gray */
+  --text-tertiary: #9a9a8f;     /* light warm gray */
+  --text-on-primary: #fafaf7;   /* cream */
+
+  /* Borders / focus */
+  --border-primary: #e8e8e0;    /* light stone */
+  --border-secondary: #d4d4c8;  /* medium stone */
+  --border-focus: #5a4a3a;      /* wood brown */
+
+  /* Shadows / radius / spacing (kept minimal for now) */
+  --shadow-minimal: 0 0 0 1px rgba(90, 74, 58, 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(90 74 58 / 0.04);
+  --radius: 0.625rem;
+
+  /* Map to Tailwind tokens used across the app */
+  --background: var(--surface-primary);
+  --foreground: var(--text-primary);
+  --card: #ffffff;
+  --card-foreground: var(--text-primary);
+  --popover: #ffffff;
+  --popover-foreground: var(--text-primary);
+  --primary: var(--brand-primary);
+  --primary-foreground: var(--text-on-primary);
+  --secondary: var(--surface-secondary);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--surface-secondary);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-warm);
+  --accent-foreground: var(--text-primary);
+  --destructive: #d4183d;
+  --destructive-foreground: #ffffff;
+  --border: var(--border-primary);
+  --input: var(--surface-input);
+  --ring: var(--border-focus);
+}
+
+.dark {
+  /* Keep dark tokens aligned with templates defaults, with warm foreground */
+  --background: oklch(0.145 0 0);
+  --foreground: #fafaf7;
+  --card: oklch(0.145 0 0);
+  --card-foreground: #fafaf7;
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: #fafaf7;
+  --primary: #fafaf7;
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: #fafaf7;
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: #fafaf7;
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --ring: oklch(0.439 0 0);
+}
