@@ -67,10 +67,12 @@ export function configureTransformersEnv(opts: ConfigureOptions = {}): void {
       "onnxruntime-web/transformers 환경 구성은 클라이언트에서만 허용됩니다. SSR 경계에서 이 모듈을 import하지 마세요."
     );
   }
-  // Suppress ORT verbose warnings (e.g., Unknown CPU vendor) in the browser.
-  // Must be set before model/session initialization.
   try {
     ort.env.logLevel = "warning";
+  } catch {}
+
+  try {
+    ort.env.wasm.proxy = true;
   } catch {}
 
   const localModelPath = opts.localModelPath ?? "/translations/models";
