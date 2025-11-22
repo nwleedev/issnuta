@@ -1,5 +1,6 @@
 "use client";
-import OfflineSetup from "@/features/offline/ui/OfflineSetup";
+import LocalTranslatorActionRow from "@/features/translate/ui/LocalTranslatorActionRow";
+import LocalTranslatorOfflineSetup from "@/features/translate/ui/LocalTranslatorOfflineSetup";
 import {
   NLLB_MODEL_ID,
   PrefetchRequiredError,
@@ -12,8 +13,7 @@ import { Textarea } from "@/shared/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useMutationState } from "@tanstack/react-query";
 import { ArrowLeftRight, Copy, RotateCcw, X } from "lucide-react";
-import dynamic from "next/dynamic";
-import { Fragment, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -44,15 +44,6 @@ const EMPTY_OUTPUTS: OutputState = { ko: "", ja: "", en: "" };
 const EMPTY_FIELD_ERRORS: FieldErrorState = { ja: null, en: null };
 
 const translationMutationKey = ["translation", "local-nllb"] as const;
-
-const SaveTranslationButton = dynamic(
-  () =>
-    import("@/features/feeds/ui/SaveTranslationButton").then((m) => m.default),
-  {
-    ssr: false,
-    loading: () => <Fragment />,
-  }
-);
 
 export function LocalNLLBTranslator() {
   const schema = z.object({
@@ -416,43 +407,13 @@ export function LocalNLLBTranslator() {
           </p>
         )}
         {/* Action */}
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button
-            type="submit"
-            disabled={isTranslating || !input.trim()}
-            className="h-11 px-6 rounded-xl"
-          >
-            {isTranslating ? "모델 로딩/번역 중…" : "번역"}
-          </Button>
-          <SaveTranslationButton
-            key={input}
-            input={input}
-            direction={direction}
-            outputs={outputs}
-            className="h-11 px-4 rounded-xl"
-          />
-          <span
-            className={`text-xs ${
-              slow && isTranslating
-                ? "text-amber-700"
-                : "text-[var(--text-secondary)]"
-            }`}
-          >
-            {slow && isTranslating
-              ? "예상보다 오래 걸립니다. 네트워크/서버 지연일 수 있습니다."
-              : "첫 실행은 모델 초기화로 수 초 소요될 수 있습니다."}
-          </span>
-          {slow && isTranslating && (
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-xl border border-[#e8e8e0] text-[#5a4a3a] hover:bg-[#fef9f3]"
-              onClick={() => window.location.reload()}
-            >
-              <RotateCcw className="w-4 h-4" /> 새로고침
-            </Button>
-          )}
-        </div>
+        <LocalTranslatorActionRow
+          input={input}
+          direction={direction}
+          outputs={outputs}
+          slow={slow}
+          isTranslating={isTranslating}
+        />
       </form>
       {/* 교차검증 토글 */}
       <label className="flex items-center gap-2 text-sm">
@@ -598,7 +559,7 @@ export function LocalNLLBTranslator() {
         )}
 
       {/* 오프라인 준비 팝업 */}
-      <OfflineSetup
+      <LocalTranslatorOfflineSetup
         modelId={NLLB_MODEL_ID}
         open={offlineOpen}
         onClose={() => setOfflineOpen(false)}
