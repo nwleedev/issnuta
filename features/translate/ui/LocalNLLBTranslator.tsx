@@ -13,12 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useMutationState } from "@tanstack/react-query";
 import { ArrowLeftRight, Copy, RotateCcw, X } from "lucide-react";
 import dynamic from "next/dynamic";
-import {
-  Fragment,
-  useCallback,
-  useRef,
-  useState,
-} from "react";
+import { Fragment, useCallback, useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -108,8 +103,8 @@ export function LocalNLLBTranslator() {
       if (direction === "koja") {
         if (showCrosscheck) {
           const [jaRes, enRes] = await Promise.allSettled([
-            translateKoToJa(input, { num_beams: 3, max_new_tokens: 128 }),
-            translateKoToEn(input, { num_beams: 3, max_new_tokens: 128 }),
+            translateKoToJa(input),
+            translateKoToEn(input),
           ]);
 
           const outputs: OutputState = { ...baseOutputs };
@@ -145,10 +140,7 @@ export function LocalNLLBTranslator() {
         }
 
         try {
-          const ja = await translateKoToJa(input, {
-            num_beams: 3,
-            max_new_tokens: 128,
-          });
+          const ja = await translateKoToJa(input);
           const outputs: OutputState = { ...baseOutputs, ja };
           return {
             outputs,
@@ -169,10 +161,7 @@ export function LocalNLLBTranslator() {
         }
       }
 
-      const text = await translateJaToKo(input, {
-        num_beams: 3,
-        max_new_tokens: 128,
-      });
+      const text = await translateJaToKo(input);
       const outputs: OutputState = { ...baseOutputs, ko: text };
       return {
         outputs,
@@ -188,8 +177,7 @@ export function LocalNLLBTranslator() {
   });
   const isTranslating = mutationStateList.length > 0;
 
-  const outputs: OutputState =
-    translateMutation.data?.outputs ?? EMPTY_OUTPUTS;
+  const outputs: OutputState = translateMutation.data?.outputs ?? EMPTY_OUTPUTS;
   const fieldErrors: FieldErrorState =
     translateMutation.data?.fieldErrors ?? EMPTY_FIELD_ERRORS;
 
@@ -226,11 +214,7 @@ export function LocalNLLBTranslator() {
     translateMutation.data?.globalError ?? null;
 
   const handleTranslate = useCallback(
-    async ({
-      input,
-      direction,
-      showCrosscheck,
-    }: FormValues): Promise<void> => {
+    async ({ input, direction, showCrosscheck }: FormValues): Promise<void> => {
       // 모바일: 번역 시작 시 입력 포커스를 제거하여 키보드를 닫습니다.
       try {
         inputRef.current?.blur();
@@ -278,7 +262,15 @@ export function LocalNLLBTranslator() {
 
       await attempt();
     },
-    [inputRef, setGlobalError, setSlow, translateMutation, retryRef, setOfflineOpen, slowTimerRef]
+    [
+      inputRef,
+      setGlobalError,
+      setSlow,
+      translateMutation,
+      retryRef,
+      setOfflineOpen,
+      slowTimerRef,
+    ]
   );
 
   const onSubmit = handleSubmit(handleTranslate);

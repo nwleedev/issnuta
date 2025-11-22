@@ -1,11 +1,7 @@
 "use client";
 
-// 한국어 주석: 브라우저에서 NLLB-200(distilled-600M, Xenova 변환 ONNX)
-// 로컬 파일(public/translations/models)만 사용하여 KO↔JA 번역을 수행하는 헬퍼입니다.
-// 환경 설정은 shared/lib/ai/env.ts로 분리되어 있으며, 서버 초기화를 방지하기 위해
-// 이 모듈에서는 동적 import로 런타임(브라우저) 시점에만 로드합니다.
-
 import { getAccuratePreset } from "@/shared/config/translation-presets";
+import { buildAllURLs, getBaseURL } from "@/shared/offline/model-urls";
 import type { PreTrainedTokenizer } from "@huggingface/transformers";
 
 // Translation pipeline/result 타입 정의
@@ -126,24 +122,16 @@ async function ensureOfflineReadyGuard(modelId: string): Promise<void> {
       return;
   } catch {}
 
-  // features/offline/urls의 계산 로직을 재사용하여 프리페치 목록과 완전 동기화
+  // shared/offline/model-urls의 계산 로직을 재사용하여 프리페치 목록과 완전 동기화
   let base: string;
-  let buildAll: (
-    baseURL: string,
-    modelId: string
-  ) => { ort: string[]; model: string[]; all: string[] };
   try {
-    const { getBaseURL, buildAllURLs } = await import(
-      "@/features/offline/urls"
-    );
     base = getBaseURL();
-    buildAll = (b, m) => buildAllURLs(b, m);
   } catch {
-    // BASE 계산 실패 또는 모듈 해석 실패 시 가드 생략(네트워크 시도로 위임)
+    // BASE 계산 실패 시 가드 생략(네트워크 시도로 위임)
     return;
   }
 
-  const { ort, model } = buildAll(base, modelId);
+  const { ort, model } = buildAllURLs(base, modelId);
 
   // 누락 항목 수집
   const missOrt: string[] = [];
