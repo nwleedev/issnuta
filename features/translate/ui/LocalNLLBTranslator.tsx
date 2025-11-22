@@ -1,288 +1,65 @@
 "use client";
-import LocalTranslatorActionRow from "@/features/translate/ui/LocalTranslatorActionRow";
-import LocalTranslatorOfflineSetup from "@/features/translate/ui/LocalTranslatorOfflineSetup";
 import {
-  NLLB_MODEL_ID,
-  PrefetchRequiredError,
-  translateJaToKo,
-  translateKoToEn,
-  translateKoToJa,
-} from "@/shared/lib/translator";
+  useLocalNLLBTranslator,
+  type LocalTranslatorDirection,
+  type LocalTranslatorOutputs,
+} from "@/features/translate/model/useLocalNLLBTranslator";
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useMutationState } from "@tanstack/react-query";
 import { ArrowLeftRight, Copy, RotateCcw, X } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
+import { useRef, useState, type ReactNode } from "react";
 
-type FormValues = {
+export type LocalTranslatorActionsParams = {
   input: string;
-  direction: "koja" | "jako";
-  showCrosscheck: boolean;
+  direction: LocalTranslatorDirection;
+  outputs: LocalTranslatorOutputs;
+  slow: boolean;
+  isTranslating: boolean;
 };
 
-type OutputState = {
-  ko: string;
-  ja: string;
-  en: string;
+export type LocalNLLBTranslatorProps = {
+  renderActions?: (params: LocalTranslatorActionsParams) => ReactNode;
+  onOfflineRequired?: (retry: () => Promise<void>) => void;
 };
 
-type FieldErrorState = {
-  ja: string | null;
-  en: string | null;
-};
+export function LocalNLLBTranslator({
+  renderActions,
+  onOfflineRequired,
+}: LocalNLLBTranslatorProps) {
+  const {
+    form,
+    input,
+    direction,
+    outputs,
+    fieldErrors,
+    globalError,
+    isTranslating,
+    slow,
+    handleSubmit,
+    handleSwap,
+    handleCopy,
+    handleClear,
+  } = useLocalNLLBTranslator({ onOfflineRequired });
 
-type TranslationData = {
-  outputs: OutputState;
-  fieldErrors: FieldErrorState;
-  globalError: string | null;
-};
-
-const EMPTY_OUTPUTS: OutputState = { ko: "", ja: "", en: "" };
-const EMPTY_FIELD_ERRORS: FieldErrorState = { ja: null, en: null };
-
-const translationMutationKey = ["translation", "local-nllb"] as const;
-
-export function LocalNLLBTranslator() {
-  const schema = z.object({
-    input: z
-      .string()
-      .trim()
-      .min(1, { message: "1자 이상 입력하세요." })
-      .max(300, { message: "최대 300자까지 입력 가능합니다." }),
-    direction: z.enum(["koja", "jako"]),
-    showCrosscheck: z.boolean(),
-  });
-
-  const form = useForm<FormValues>({
-    defaultValues: { input: "", direction: "koja", showCrosscheck: true },
-    resolver: zodResolver(schema),
-    mode: "onTouched",
-    reValidateMode: "onChange",
-  });
-  const { register, handleSubmit, setValue, formState } = form;
-  const direction = useWatch({ control: form.control, name: "direction" });
-  const input = useWatch({ control: form.control, name: "input" });
+  const { register, setValue, formState } = form;
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [copied, setCopied] = useState<"in" | "out" | null>(null);
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [slow, setSlow] = useState(false); // 장기 지연 안내 플래그
-  const [offlineOpen, setOfflineOpen] = useState(false);
-  const retryRef = useRef<(() => Promise<void>) | null>(null);
-  const slowTimerRef = useRef<number | null>(null);
 
   const { ref: inputFieldRef, ...inputFieldProps } = register("input", {
     setValueAs: (v) => (typeof v === "string" ? v : ""),
   });
 
-  const translateMutation = useMutation<TranslationData, unknown, FormValues>({
-    mutationKey: translationMutationKey,
-    mutationFn: async ({ input, direction, showCrosscheck }) => {
-      const baseOutputs: OutputState = { ...EMPTY_OUTPUTS };
-      const baseErrors: FieldErrorState = { ...EMPTY_FIELD_ERRORS };
-
-      if (!input.trim()) {
-        return {
-          outputs: baseOutputs,
-          fieldErrors: baseErrors,
-          globalError: null,
-        };
-      }
-
-      if (direction === "koja") {
-        if (showCrosscheck) {
-          const [jaRes, enRes] = await Promise.allSettled([
-            translateKoToJa(input),
-            translateKoToEn(input),
-          ]);
-
-          const outputs: OutputState = { ...baseOutputs };
-          const fieldErrors: FieldErrorState = { ...baseErrors };
-          let globalError: string | null = null;
-
-          if (jaRes.status === "fulfilled") {
-            outputs.ja = jaRes.value;
-          } else {
-            const msg =
-              jaRes.reason instanceof Error
-                ? jaRes.reason.message
-                : String(jaRes.reason);
-            fieldErrors.ja = msg || "일본어 번역에 실패했습니다.";
-          }
-
-          if (enRes.status === "fulfilled") {
-            outputs.en = enRes.value;
-          } else {
-            const msg =
-              enRes.reason instanceof Error
-                ? enRes.reason.message
-                : String(enRes.reason);
-            fieldErrors.en = msg || "영어 번역에 실패했습니다.";
-          }
-
-          if (jaRes.status === "rejected" && enRes.status === "rejected") {
-            globalError =
-              "두 번역 모두 실패했습니다. 네트워크 또는 모델 상태를 확인하세요.";
-          }
-
-          return { outputs, fieldErrors, globalError };
-        }
-
-        try {
-          const ja = await translateKoToJa(input);
-          const outputs: OutputState = { ...baseOutputs, ja };
-          return {
-            outputs,
-            fieldErrors: baseErrors,
-            globalError: null,
-          };
-        } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : String(e);
-          const fieldErrors: FieldErrorState = {
-            ...baseErrors,
-            ja: msg || "일본어 번역에 실패했습니다.",
-          };
-          return {
-            outputs: baseOutputs,
-            fieldErrors,
-            globalError: null,
-          };
-        }
-      }
-
-      const text = await translateJaToKo(input);
-      const outputs: OutputState = { ...baseOutputs, ko: text };
-      return {
-        outputs,
-        fieldErrors: baseErrors,
-        globalError: null,
-      };
-    },
-    retry: 0,
-  });
-
-  const mutationStateList = useMutationState({
-    filters: { mutationKey: translationMutationKey, status: "pending" },
-  });
-  const isTranslating = mutationStateList.length > 0;
-
-  const outputs: OutputState = translateMutation.data?.outputs ?? EMPTY_OUTPUTS;
-  const fieldErrors: FieldErrorState =
-    translateMutation.data?.fieldErrors ?? EMPTY_FIELD_ERRORS;
-
-  // 사용자 안내용 에러 메시지 맵핑(요약)
-  function mapErrorToMessage(e: unknown): string {
-    // 오프라인 프리페치 요구
-    if (
-      e instanceof PrefetchRequiredError ||
-      (typeof e === "object" &&
-        e &&
-        (e as any)?.code === "OFFLINE_PREFETCH_REQUIRED")
-    ) {
-      return "오프라인 리소스가 없습니다. ‘모델 다운로드’로 준비한 뒤 다시 시도해 주세요.";
-    }
-    const msg = e instanceof Error ? e.message : String(e);
-    // 네트워크/CORS 계열
-    if (/Failed to fetch|NetworkError|TypeError/i.test(msg)) {
-      if (
-        typeof navigator !== "undefined" &&
-        (navigator as any)?.onLine === false
-      ) {
-        return "네트워크 연결이 끊어졌습니다. 연결 후 다시 시도해 주세요.";
-      }
-      return "네트워크 또는 CORS 정책 문제로 요청에 실패했습니다.";
-    }
-    // 런타임 바인딩/경로 문제
-    if (/invalid data location|Inputs given to model: \{\}/i.test(msg)) {
-      return "런타임 구성 오류: WASM 경로/토크나이저/양자화(q8) 구성을 확인해 주세요.";
-    }
-    return msg || "번역 중 오류가 발생했습니다.";
-  }
-
-  const derivedGlobalErrorFromData =
-    translateMutation.data?.globalError ?? null;
-
-  const handleTranslate = useCallback(
-    async ({ input, direction, showCrosscheck }: FormValues): Promise<void> => {
-      // 모바일: 번역 시작 시 입력 포커스를 제거하여 키보드를 닫습니다.
-      try {
-        inputRef.current?.blur();
-      } catch {}
-      setGlobalError(null);
-      if (!input.trim()) return;
-      const attempt = async () => {
-        try {
-          setSlow(false);
-          // 12초 경과 시 장기 지연 안내 플래그 on
-          try {
-            slowTimerRef.current = window.setTimeout(
-              () => setSlow(true),
-              12_000
-            );
-          } catch {}
-          await translateMutation.mutateAsync({
-            input,
-            direction,
-            showCrosscheck,
-          });
-        } catch (e: unknown) {
-          if (
-            e instanceof PrefetchRequiredError ||
-            (e as any)?.code === "OFFLINE_PREFETCH_REQUIRED"
-          ) {
-            // 오프라인에서 필수 리소스가 캐시에 없음 → 프리페치 유도
-            // 완료 후 최신 폼값으로 재시도
-            retryRef.current = onSubmit;
-            setOfflineOpen(true);
-            return;
-          }
-          const message = mapErrorToMessage(e);
-          setGlobalError(message);
-        } finally {
-          if (slowTimerRef.current) {
-            try {
-              window.clearTimeout(slowTimerRef.current);
-            } catch {}
-            slowTimerRef.current = null;
-          }
-          setSlow(false);
-        }
-      };
-
-      await attempt();
-    },
-    [
-      inputRef,
-      setGlobalError,
-      setSlow,
-      translateMutation,
-      retryRef,
-      setOfflineOpen,
-      slowTimerRef,
-    ]
-  );
-
-  const onSubmit = handleSubmit(handleTranslate);
-
-  const swap = () => {
-    const nextDirection = direction === "koja" ? "jako" : "koja";
-    setValue("direction", nextDirection);
-    if (direction === "koja" && outputs.ja) {
-      setValue("input", outputs.ja);
-    } else if (direction === "jako" && outputs.ko) {
-      setValue("input", outputs.ko);
-    }
-    translateMutation.reset();
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = (event) => {
+    try {
+      inputRef.current?.blur();
+    } catch {}
+    handleSubmit(event);
   };
 
   const copy = async (text: string, which: "in" | "out") => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(which);
-      setTimeout(() => setCopied(null), 1500);
-    } catch {}
+    await handleCopy(text, which);
+    setCopied(which);
+    setTimeout(() => setCopied(null), 1500);
   };
 
   // Note: Microphone and speaker features removed for minimal deployment.
@@ -337,7 +114,7 @@ export function LocalNLLBTranslator() {
 
         <button
           type="button"
-          onClick={swap}
+          onClick={handleSwap}
           aria-label="언어 전환"
           className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-lg bg-white border border-[var(--border-primary)] hover:border-[var(--border-focus)] shadow-sm grid place-items-center"
         >
@@ -390,10 +167,7 @@ export function LocalNLLBTranslator() {
                   variant="ghost"
                   size="icon"
                   aria-label="지우기"
-                  onClick={() => {
-                    setValue("input", "");
-                    translateMutation.reset();
-                  }}
+                  onClick={handleClear}
                 >
                   <X className="w-4 h-4 text-[var(--brand-primary)]" />
                 </Button>
@@ -406,14 +180,23 @@ export function LocalNLLBTranslator() {
             {formState.errors.input.message as string}
           </p>
         )}
-        {/* Action */}
-        <LocalTranslatorActionRow
-          input={input}
-          direction={direction}
-          outputs={outputs}
-          slow={slow}
-          isTranslating={isTranslating}
-        />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <Button
+            type="submit"
+            disabled={isTranslating || !input.trim()}
+            className="h-11 px-6 rounded-xl"
+          >
+            {isTranslating ? "모델 로딩/번역 중…" : "번역"}
+          </Button>
+          {renderActions &&
+            renderActions({
+              input,
+              direction,
+              outputs,
+              slow,
+              isTranslating,
+            })}
+        </div>
       </form>
       {/* 교차검증 토글 */}
       <label className="flex items-center gap-2 text-sm">
@@ -427,10 +210,10 @@ export function LocalNLLBTranslator() {
         </span>
       </label>
 
-      {derivedGlobalErrorFromData || globalError ? (
+      {globalError ? (
         <div className="flex items-center gap-3">
           <p className="text-sm text-destructive" role="alert">
-            {derivedGlobalErrorFromData ?? globalError}
+            {globalError}
           </p>
           <Button
             type="button"
@@ -557,22 +340,6 @@ export function LocalNLLBTranslator() {
             )}
           </div>
         )}
-
-      {/* 오프라인 준비 팝업 */}
-      <LocalTranslatorOfflineSetup
-        modelId={NLLB_MODEL_ID}
-        open={offlineOpen}
-        onClose={() => setOfflineOpen(false)}
-        onDone={async () => {
-          setOfflineOpen(false);
-          const f = retryRef.current;
-          retryRef.current = null;
-          if (f) {
-            // 프리페치 완료 후 자동 재시도
-            await f();
-          }
-        }}
-      />
     </section>
   );
 }
