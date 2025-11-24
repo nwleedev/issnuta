@@ -1,7 +1,8 @@
 "use client";
 
 import TopAppBar from "@/features/shell/ui/TopAppBar";
-import { Search, X } from "lucide-react";
+import { Button } from "@/shared/ui/button";
+import { QrCode, Search, X } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 
@@ -19,7 +20,20 @@ export default function FeedsPage() {
   return (
     <main className="min-h-dvh bg-[#fafaf7]">
       <div className="mx-auto flex min-h-dvh max-w-screen-sm flex-col">
-        <TopAppBar title="History" />
+        <TopAppBar
+          title="Feeds"
+          subtitle="Saved translations"
+          trailing={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="QR code actions"
+            >
+              <QrCode className="h-5 w-5 text-[var(--text-primary)]" />
+            </Button>
+          }
+        />
 
         {/* Search & Filter */}
         <div className="shrink-0 px-5 pb-4 pt-4 space-y-3">
