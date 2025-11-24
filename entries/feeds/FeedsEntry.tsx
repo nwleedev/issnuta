@@ -3,23 +3,47 @@ import {
   useDeleteTranslation,
   useToggleFavoriteTranslation,
 } from "@/features/feeds/model/useLocalTranslations";
+import { FeedQrCodeDialog } from "@/features/feeds/ui/FeedQrCodeDialog";
+import {
+  buildFeedSharePayload,
+  stringifyFeedSharePayload,
+} from "@/shared/lib/qrShare";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
-import { Copy, Star, Trash2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { Copy, Star, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 export interface FeedsEntryProps {
   search: string;
   filter: "all" | "favorites";
+  /**
+   * QR 옵션 시트 외부 제어용 상태
+   * - 제공되지 않으면 내부에서 로컬 상태로 관리합니다.
+   */
+  isQrMenuOpen?: boolean;
+  onQrMenuOpenChange?: (open: boolean) => void;
 }
 
 const FeedsEntry = (props: FeedsEntryProps) => {
-  const { search, filter } = props;
+  const { search, filter, isQrMenuOpen, onQrMenuOpenChange } = props;
   useEffect(() => {
     void migrateFeedsToIndexedDBOnce();
   }, []);
   const { data: translations = [], isLoading } = useLocalTranslations();
   const deleteMutation = useDeleteTranslation();
   const toggleFavoriteMutation = useToggleFavoriteTranslation();
+  const [internalQrMenuOpen, setInternalQrMenuOpen] = useState(false);
+  const [isQrOpen, setIsQrOpen] = useState(false);
+  const [qrValue, setQrValue] = useState<string | null>(null);
+
+  const qrMenuOpen = isQrMenuOpen ?? internalQrMenuOpen;
+
+  const setQrMenuOpen = (open: boolean) => {
+    if (onQrMenuOpenChange) {
+      onQrMenuOpenChange(open);
+      return;
+    }
+    setInternalQrMenuOpen(open);
+  };
 
   const feeds = useMemo(
     () =>
@@ -73,8 +97,41 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       // noop
     }
   };
+
+  const handleOpenQrMenu = () => {
+    if (isLoading || translations.length === 0) return;
+    setQrMenuOpen(true);
+  };
+
+  const handleCloseQrMenu = () => {
+    setQrMenuOpen(false);
+  };
+
+  const handleOpenQrForAll = () => {
+    if (!translations.length) return;
+    const payload = buildFeedSharePayload(translations);
+    const value = stringifyFeedSharePayload(payload);
+    setQrValue(value);
+    setIsQrOpen(true);
+  };
+
+  const handleCloseQr = () => {
+    setIsQrOpen(false);
+  };
+
   return (
     <section className="flex-1 px-5 pb-6">
+      <div className="mb-3 flex justify-end">
+        <button
+          type="button"
+          onClick={handleOpenQrMenu}
+          disabled={isLoading || translations.length === 0}
+          className="inline-flex items-center gap-1 rounded-xl border border-[#e8e8e0] bg-white px-3 py-1.5 text-xs text-[#5a4a3a] shadow-sm hover:bg-[#f5f5f0] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+        >
+          <span aria-hidden>📤</span>
+          <span>QR 코드 옵션</span>
+        </button>
+      </div>
       {isLoading ? (
         <p className="mt-8 text-center text-sm text-[#6b6b60]">
           불러오는 중…
@@ -153,6 +210,92 @@ const FeedsEntry = (props: FeedsEntryProps) => {
           ))}
         </ul>
       )}
+      {qrMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black/40"
+            onClick={handleCloseQrMenu}
+            aria-hidden="true"
+          />
+          <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-6">
+            <div className="mx-auto max-w-screen-sm overflow-hidden rounded-2xl border border-[#e8e8e0] bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b border-[#e8e8e0] px-4 py-3">
+                <div>
+                  <h2 className="text-sm font-semibold text-[#2d2d28]">
+                    QR 코드 옵션
+                  </h2>
+                  <p className="mt-0.5 text-xs text-[#6b6b60]">
+                    히스토리를 공유하거나 다른 기기에서 가져옵니다.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleCloseQrMenu}
+                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f5f5f0] text-[#6b6b60] focus:outline-none"
+                  aria-label="QR 옵션 닫기"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="p-2">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0] disabled:text-[#9a9a8f]"
+                  disabled
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
+                    선택
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[#2d2d28]">선택해서 공유</div>
+                    <div className="mt-0.5 text-xs text-[#9a9a8f]">
+                      여러 항목을 골라 QR로 공유 (준비 중)
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0] disabled:text-[#9a9a8f]"
+                  disabled
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
+                    스캔
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[#2d2d28]">QR 코드 스캔</div>
+                    <div className="mt-0.5 text-xs text-[#9a9a8f]">
+                      다른 기기에서 생성한 QR을 스캔 (준비 중)
+                    </div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCloseQrMenu();
+                    handleOpenQrForAll();
+                  }}
+                  className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#5a4a3a] px-4 py-3 text-left text-sm text-[#fafaf7] hover:bg-[#4a3a2a] transition-colors"
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fafaf7]/10 text-xs">
+                    전체
+                  </div>
+                  <div className="flex-1">
+                    <div>전체 히스토리 공유</div>
+                    <div className="mt-0.5 text-xs text-[#f5f5f0]/80">
+                      현재 기기의 모든 히스토리를 하나의 QR로 공유
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+      <FeedQrCodeDialog
+        isOpen={isQrOpen && !!qrValue}
+        onClose={handleCloseQr}
+        data={qrValue ?? ""}
+      />
     </section>
   );
 };

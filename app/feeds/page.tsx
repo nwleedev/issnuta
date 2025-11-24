@@ -16,6 +16,7 @@ const FeedsEntry = dynamic(
 export default function FeedsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "favorites">("all");
+  const [isQrMenuOpen, setIsQrMenuOpen] = useState(false);
 
   return (
     <main className="min-h-dvh bg-[#fafaf7]">
@@ -29,6 +30,7 @@ export default function FeedsPage() {
               variant="ghost"
               size="icon"
               aria-label="QR code actions"
+              onClick={() => setIsQrMenuOpen(true)}
             >
               <QrCode className="h-5 w-5 text-[var(--text-primary)]" />
             </Button>
@@ -89,7 +91,12 @@ export default function FeedsPage() {
         </div>
 
         {/* List */}
-        <FeedsEntry search={search} filter={filter} />
+        <FeedsEntry
+          search={search}
+          filter={filter}
+          isQrMenuOpen={isQrMenuOpen}
+          onQrMenuOpenChange={setIsQrMenuOpen}
+        />
       </div>
     </main>
   );
