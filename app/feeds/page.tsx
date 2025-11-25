@@ -17,6 +17,7 @@ export default function FeedsPage() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "favorites">("all");
   const [isQrMenuOpen, setIsQrMenuOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   return (
     <main className="min-h-dvh bg-[#fafaf7]">
@@ -64,30 +65,45 @@ export default function FeedsPage() {
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setFilter("all")}
-              className={`flex-1 h-9 rounded-xl text-sm transition-all ${
-                filter === "all"
-                  ? "bg-[#5a4a3a] text-[#fafaf7]"
-                  : "bg-white text-[#6b6b60] hover:bg-[#f5f5f0] border border-[#e8e8e0]"
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter("favorites")}
-              className={`flex-1 h-9 rounded-xl text-sm transition-all ${
-                filter === "favorites"
-                  ? "bg-[#5a4a3a] text-[#fafaf7]"
-                  : "bg-white text-[#6b6b60] hover:bg-[#f5f5f0] border border-[#e8e8e0]"
-              }`}
-            >
-              Favorites
-            </button>
-          </div>
+          {selectionMode ? (
+            <div className="flex items-center justify-between rounded-xl bg-[#fef9f3] px-3 py-2 text-xs text-[#5a4a3a] border border-[#f5e5d8]">
+              <div className="text-[11px]">
+                선택 모드가 활성화되었습니다. 카드에서 공유할 항목을 선택하세요.
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectionMode(false)}
+                className="ml-2 rounded-lg border border-[#e8e8e0] bg-white px-2 py-1 text-[11px] text-[#5a4a3a] hover:bg-[#f5f5f0]"
+              >
+                선택 모드 종료
+              </button>
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setFilter("all")}
+                className={`flex-1 h-9 rounded-xl text-sm transition-all ${
+                  filter === "all"
+                    ? "bg-[#5a4a3a] text-[#fafaf7]"
+                    : "bg-white text-[#6b6b60] hover:bg-[#f5f5f0] border border-[#e8e8e0]"
+                }`}
+              >
+                All
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilter("favorites")}
+                className={`flex-1 h-9 rounded-xl text-sm transition-all ${
+                  filter === "favorites"
+                    ? "bg-[#5a4a3a] text-[#fafaf7]"
+                    : "bg-white text-[#6b6b60] hover:bg-[#f5f5f0] border border-[#e8e8e0]"
+                }`}
+              >
+                Favorites
+              </button>
+            </div>
+          )}
         </div>
 
         {/* List */}
@@ -96,6 +112,8 @@ export default function FeedsPage() {
           filter={filter}
           isQrMenuOpen={isQrMenuOpen}
           onQrMenuOpenChange={setIsQrMenuOpen}
+          selectionMode={selectionMode}
+          onSelectionModeChange={setSelectionMode}
         />
       </div>
     </main>

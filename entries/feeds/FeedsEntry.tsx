@@ -1,6 +1,6 @@
 import {
-  useLocalTranslations,
   useDeleteTranslation,
+  useLocalTranslations,
   useToggleFavoriteTranslation,
 } from "@/features/feeds/model/useLocalTranslations";
 import { FeedQrCodeDialog } from "@/features/feeds/ui/FeedQrCodeDialog";
@@ -21,10 +21,23 @@ export interface FeedsEntryProps {
    */
   isQrMenuOpen?: boolean;
   onQrMenuOpenChange?: (open: boolean) => void;
+  /**
+   * 선택 모드 외부 제어용 상태
+   * - 제공되지 않으면 내부에서 로컬 상태로 관리합니다.
+   */
+  selectionMode: boolean;
+  onSelectionModeChange: (open: boolean) => void;
 }
 
 const FeedsEntry = (props: FeedsEntryProps) => {
-  const { search, filter, isQrMenuOpen, onQrMenuOpenChange } = props;
+  const {
+    search,
+    filter,
+    isQrMenuOpen,
+    onQrMenuOpenChange,
+    selectionMode,
+    onSelectionModeChange,
+  } = props;
   useEffect(() => {
     void migrateFeedsToIndexedDBOnce();
   }, []);
@@ -34,6 +47,9 @@ const FeedsEntry = (props: FeedsEntryProps) => {
   const [internalQrMenuOpen, setInternalQrMenuOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrValue, setQrValue] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set<string>()
+  );
 
   const qrMenuOpen = isQrMenuOpen ?? internalQrMenuOpen;
 
@@ -43,6 +59,13 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       return;
     }
     setInternalQrMenuOpen(open);
+  };
+
+  const setSelectionMode = (open: boolean) => {
+    if (onSelectionModeChange) {
+      onSelectionModeChange(open);
+      return;
+    }
   };
 
   const feeds = useMemo(
@@ -119,23 +142,110 @@ const FeedsEntry = (props: FeedsEntryProps) => {
     setIsQrOpen(false);
   };
 
+  const handleEnterSelectionMode = () => {
+    setSelectionMode(true);
+    if (!filteredFeeds.length) {
+      setSelectedIds(new Set<string>());
+    }
+  };
+
+  const handleExitSelectionMode = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set<string>());
+  };
+
+  const handleToggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAllVisible = () => {
+    setSelectedIds(() => new Set<string>(filteredFeeds.map((item) => item.id)));
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds(new Set<string>());
+  };
+
+  const handleShareSelected = () => {
+    if (selectedIds.size === 0) return;
+    const selectedTranslations = translations.filter((t) =>
+      selectedIds.has(t.id)
+    );
+    if (selectedTranslations.length === 0) return;
+    const payload = buildFeedSharePayload(selectedTranslations);
+    const value = stringifyFeedSharePayload(payload);
+    setQrValue(value);
+    setIsQrOpen(true);
+  };
+
   return (
     <section className="flex-1 px-5 pb-6">
-      <div className="mb-3 flex justify-end">
-        <button
-          type="button"
-          onClick={handleOpenQrMenu}
-          disabled={isLoading || translations.length === 0}
-          className="inline-flex items-center gap-1 rounded-xl border border-[#e8e8e0] bg-white px-3 py-1.5 text-xs text-[#5a4a3a] shadow-sm hover:bg-[#f5f5f0] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-        >
-          <span aria-hidden>📤</span>
-          <span>QR 코드 옵션</span>
-        </button>
+      <div className="mb-3 flex items-center justify-between text-xs">
+        <div className="text-[#6b6b60]">
+          {selectionMode ? (
+            <div className="space-y-0.5">
+              <div>선택 모드 · {selectedIds.size}개 선택됨</div>
+              <div className="text-[11px] text-[#9a9a8f]">
+                카드를 탭해서 항목을 선택하거나 해제할 수 있어요.
+              </div>
+            </div>
+          ) : null}
+        </div>
+        <div className="flex gap-2">
+          {selectionMode && (
+            <>
+              <button
+                type="button"
+                onClick={handleSelectAllVisible}
+                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+              >
+                전체 선택
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSelection}
+                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+              >
+                선택 해제
+              </button>
+              <button
+                type="button"
+                onClick={handleShareSelected}
+                disabled={selectedIds.size === 0}
+                className="rounded-xl border border-[#5a4a3a] bg-[#5a4a3a] px-2 py-1 text-[#fafaf7] hover:bg-[#4a3a2a] disabled:border-[#e8e8e0] disabled:bg-white disabled:text-[#9a9a8f]"
+              >
+                선택 공유
+              </button>
+              <button
+                type="button"
+                onClick={handleExitSelectionMode}
+                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+              >
+                완료
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={handleOpenQrMenu}
+            disabled={isLoading || translations.length === 0}
+            className="inline-flex items-center gap-1 rounded-xl border border-[#e8e8e0] bg-white px-3 py-1.5 text-[11px] text-[#5a4a3a] shadow-sm hover:bg-[#f5f5f0] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
+          >
+            <span aria-hidden>📤</span>
+            <span>QR 코드 옵션</span>
+          </button>
+        </div>
       </div>
       {isLoading ? (
-        <p className="mt-8 text-center text-sm text-[#6b6b60]">
-          불러오는 중…
-        </p>
+        <p className="mt-8 text-center text-sm text-[#6b6b60]">불러오는 중…</p>
       ) : filteredFeeds.length === 0 ? (
         <p className="mt-8 text-center text-sm text-[#6b6b60]">
           아직 저장된 번역이 없습니다.
@@ -143,68 +253,113 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       ) : (
         <ul className="space-y-3">
           {filteredFeeds.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-2xl border border-[#e8e8e0] bg-white p-4 text-sm text-[#2d2d28] shadow-sm"
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <div className="text-[11px] uppercase tracking-wide text-[#9a9a8f]">
-                  {item.fromLang.toUpperCase()} → {item.toLang.toUpperCase()}
+            <li key={item.id}>
+              <div
+                className={`rounded-2xl border bg-white p-4 text-sm text-[#2d2d28] shadow-sm transition-colors ${
+                  selectionMode && selectedIds.has(item.id)
+                    ? "border-[#5a4a3a] bg-[#fef9f3]"
+                    : "border-[#e8e8e0]"
+                }`}
+                onClick={(event) => {
+                  if (!selectionMode) return;
+                  const target = event.target as HTMLElement;
+                  if (target.closest("[data-card-action='true']")) {
+                    return;
+                  }
+                  handleToggleSelect(item.id);
+                }}
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <div className="text-[11px] uppercase tracking-wide text-[#9a9a8f]">
+                    {item.fromLang.toUpperCase()} → {item.toLang.toUpperCase()}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {selectionMode && (
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSelect(item.id)}
+                        className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${
+                          selectedIds.has(item.id)
+                            ? "border-[#5a4a3a] bg-[#5a4a3a] text-[#fafaf7]"
+                            : "border-[#e8e8e0] bg-white text-[#9a9a8f]"
+                        }`}
+                        aria-label={
+                          selectedIds.has(item.id)
+                            ? "항목 선택 해제"
+                            : "항목 선택"
+                        }
+                      >
+                        ✓
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      data-card-action="true"
+                      onClick={() => {
+                        handleToggleFavorite(item.id);
+                      }}
+                      aria-label="즐겨찾기 전환"
+                      className="text-[#9a9a8f] hover:text-[#e0b74f] transition-colors"
+                    >
+                      <Star
+                        className={`h-4 w-4 ${
+                          item.isFavorite ? "fill-[#e0b74f] text-[#e0b74f]" : ""
+                        }`}
+                      />
+                    </button>
+                    <button
+                      type="button"
+                      data-card-action="true"
+                      onClick={() => {
+                        handleDelete(item.id);
+                      }}
+                      aria-label="삭제"
+                      className="text-[#9a9a8f] hover:text-[#b94c4c] transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFavorite(item.id)}
-                    aria-label="즐겨찾기 전환"
-                    className="text-[#9a9a8f] hover:text-[#e0b74f] transition-colors"
-                  >
-                    <Star
-                      className={`h-4 w-4 ${
-                        item.isFavorite ? "fill-[#e0b74f] text-[#e0b74f]" : ""
-                      }`}
-                    />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(item.id)}
-                    aria-label="삭제"
-                    className="text-[#9a9a8f] hover:text-[#b94c4c] transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="mb-2 text-xs text-[#6b6b60]">입력</div>
-              <p className="mb-2 whitespace-pre-wrap text-sm">{item.input}</p>
-              <div className="mb-2 text-xs text-[#6b6b60]">번역</div>
-              <p className="mb-2 whitespace-pre-wrap text-sm">{item.primary}</p>
-              {item.crossCheck && (
-                <>
-                  <div className="mb-2 text-xs text-[#6b6b60]">교차검증</div>
-                  <p className="whitespace-pre-wrap text-sm">
-                    {item.crossCheck}
-                  </p>
-                </>
-              )}
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleCopy(item.primary)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-[#e8e8e0] px-2 py-1 text-xs text-[#5a4a3a] hover:bg-[#f5f5f0] transition-colors"
-                >
-                  <Copy className="h-3 w-3" />
-                  번역 복사
-                </button>
+                <div className="mb-2 text-xs text-[#6b6b60]">입력</div>
+                <p className="mb-2 whitespace-pre-wrap text-sm">{item.input}</p>
+                <div className="mb-2 text-xs text-[#6b6b60]">번역</div>
+                <p className="mb-2 whitespace-pre-wrap text-sm">
+                  {item.primary}
+                </p>
                 {item.crossCheck && (
+                  <>
+                    <div className="mb-2 text-xs text-[#6b6b60]">교차검증</div>
+                    <p className="whitespace-pre-wrap text-sm">
+                      {item.crossCheck}
+                    </p>
+                  </>
+                )}
+                <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => handleCopy(item.crossCheck!)}
+                    data-card-action="true"
+                    onClick={() => {
+                      handleCopy(item.primary);
+                    }}
                     className="inline-flex items-center gap-1 rounded-lg border border-[#e8e8e0] px-2 py-1 text-xs text-[#5a4a3a] hover:bg-[#f5f5f0] transition-colors"
                   >
                     <Copy className="h-3 w-3" />
-                    교차검증 복사
+                    번역 복사
                   </button>
-                )}
+                  {item.crossCheck && (
+                    <button
+                      type="button"
+                      data-card-action="true"
+                      onClick={() => {
+                        handleCopy(item.crossCheck!);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-lg border border-[#e8e8e0] px-2 py-1 text-xs text-[#5a4a3a] hover:bg-[#f5f5f0] transition-colors"
+                    >
+                      <Copy className="h-3 w-3" />
+                      교차검증 복사
+                    </button>
+                  )}
+                </div>
               </div>
             </li>
           ))}
@@ -240,8 +395,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
               <div className="p-2">
                 <button
                   type="button"
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0] disabled:text-[#9a9a8f]"
-                  disabled
+                  onClick={() => {
+                    handleCloseQrMenu();
+                    handleEnterSelectionMode();
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0]"
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
                     선택
@@ -249,7 +407,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                   <div className="flex-1">
                     <div className="text-[#2d2d28]">선택해서 공유</div>
                     <div className="mt-0.5 text-xs text-[#9a9a8f]">
-                      여러 항목을 골라 QR로 공유 (준비 중)
+                      여러 항목을 골라 QR로 공유
                     </div>
                   </div>
                 </button>
