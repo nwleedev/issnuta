@@ -54,3 +54,33 @@ export async function updateTranslationFavorite(params: {
   await db.put("translations", updated);
   return updated;
 }
+
+export async function importTranslationsFromQr(
+  records: SavedTranslation[]
+): Promise<{ imported: number; duplicates: number; skipped: number }> {
+  const db = await getDB();
+  let imported = 0;
+  let duplicates = 0;
+  let skipped = 0;
+
+  for (const record of records) {
+    if (!record?.id) {
+      skipped += 1;
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    // 이미 동일 id가 있으면 중복으로 간주하고 건너뜁니다.
+    const existing = await db.get("translations", record.id);
+    if (existing) {
+      duplicates += 1;
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
+    await db.put("translations", record);
+    imported += 1;
+  }
+
+  return { imported, duplicates, skipped };
+}

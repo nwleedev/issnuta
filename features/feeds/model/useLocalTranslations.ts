@@ -13,7 +13,7 @@ import {
   updateTranslationFavorite,
 } from "@/shared/storage/translation-store";
 
-const translationsKey = ["local-translations"] as const;
+export const translationsKey = ["local-translations"] as const;
 
 export function useLocalTranslations() {
   return useQuery<SavedTranslation[]>({
@@ -76,4 +76,3 @@ export function useToggleFavoriteTranslation() {
     },
   });
 }
-

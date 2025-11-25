@@ -10,6 +10,7 @@ import {
 } from "@/shared/lib/qrShare";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
 import { Copy, Star, Trash2, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 export interface FeedsEntryProps {
@@ -38,6 +39,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
     selectionMode,
     onSelectionModeChange,
   } = props;
+  const router = useRouter();
   useEffect(() => {
     void migrateFeedsToIndexedDBOnce();
   }, []);
@@ -62,10 +64,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
   };
 
   const setSelectionMode = (open: boolean) => {
-    if (onSelectionModeChange) {
-      onSelectionModeChange(open);
-      return;
-    }
+    onSelectionModeChange(open);
   };
 
   const feeds = useMemo(
@@ -414,7 +413,10 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                 <button
                   type="button"
                   className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0] disabled:text-[#9a9a8f]"
-                  disabled
+                  onClick={() => {
+                    handleCloseQrMenu();
+                    router.push("/feeds/scan");
+                  }}
                 >
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
                     스캔
