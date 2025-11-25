@@ -40,12 +40,14 @@ type BottomCardProps = {
   cameraError: string | null;
   status: ScanStatus;
   onClose: () => void;
+  onRetry?: () => void;
 };
 
 function FeedQrScannerBottomCard({
   cameraError,
   status,
   onClose,
+  onRetry,
 }: BottomCardProps) {
   if (cameraError) {
     return (
@@ -58,13 +60,24 @@ function FeedQrScannerBottomCard({
               <p className="text-sm text-[#6b6b60]">{cameraError}</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 w-full rounded-xl bg-white text-sm text-[#5a4a3a] border border-[#e8e8e0] hover:bg-[#f5f5f0]"
-          >
-            닫기
-          </button>
+          <div className="flex gap-3">
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="flex-1 h-11 rounded-xl bg-[#5a4a3a] text-sm text-[#fafaf7] hover:bg-[#4a3a2a]"
+              >
+                다시 시도
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 h-11 rounded-xl bg-white text-sm text-[#5a4a3a] border border-[#e8e8e0] hover:bg-[#f5f5f0]"
+            >
+              닫기
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -109,17 +122,28 @@ function FeedQrScannerBottomCard({
               )}
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`h-11 w-full rounded-xl text-sm ${
-              isSuccess
-                ? "bg-[#5a4a3a] text-[#fafaf7] hover:bg-[#4a3a2a]"
-                : "bg-white text-[#5a4a3a] border border-[#e8e8e0] hover:bg-[#f5f5f0]"
-            }`}
-          >
-            {isSuccess ? "히스토리로 돌아가기" : "닫기"}
-          </button>
+          <div className="flex gap-3">
+            {!isSuccess && onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                className="flex-1 h-11 rounded-xl bg-[#5a4a3a] text-sm text-[#fafaf7] hover:bg-[#4a3a2a]"
+              >
+                다시 스캔
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex-1 h-11 rounded-xl text-sm ${
+                isSuccess
+                  ? "bg-[#5a4a3a] text-[#fafaf7] hover:bg-[#4a3a2a]"
+                  : "bg-white text-[#5a4a3a] border border-[#e8e8e0] hover:bg-[#f5f5f0]"
+              }`}
+            >
+              {isSuccess ? "히스토리로 돌아가기" : "닫기"}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -208,73 +232,70 @@ export function FeedQrScanner({ onClose, onImported }: FeedQrScannerProps) {
     [onImported, queryClient, stopScanner]
   );
 
-  useEffect(() => {
-    let active = true;
+  const startScanner = useCallback(async () => {
+    try {
+      const html5qrcodeModule = await import("html5-qrcode");
 
-    const startScanner = async () => {
-      try {
-        const html5qrcodeModule = await import("html5-qrcode");
-        if (!active) return;
+      const Html5Qrcode = html5qrcodeModule.Html5Qrcode as unknown as {
+        new (elementId: string): Html5QrcodeInstance;
+      };
 
-        const Html5Qrcode = html5qrcodeModule.Html5Qrcode as unknown as {
-          new (elementId: string): Html5QrcodeInstance;
-        };
+      const instance = new Html5Qrcode("qr-reader");
+      scannerRef.current = instance;
 
-        const instance = new Html5Qrcode("qr-reader");
-        scannerRef.current = instance;
-
-        await instance.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-          },
-          (decodedText) => {
-            void handleScanSuccess(decodedText);
-          },
-          () => {
-            // ignore per-frame decode errors
-          }
-        );
-
-        if (!active) {
-          await stopScanner();
-          return;
+      await instance.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+        },
+        (decodedText) => {
+          void handleScanSuccess(decodedText);
+        },
+        () => {
+          // ignore per-frame decode errors
         }
-        setIsScanning(true);
-        setCameraError(null);
-      } catch (error) {
-        setIsScanning(false);
+      );
+
+      setIsScanning(true);
+      setCameraError(null);
+    } catch (error) {
+      setIsScanning(false);
+      const message =
+        error instanceof Error ? error.message : String(error ?? "");
+      if (message.includes("The play() request was interrupted")) {
         setCameraError(
-          error instanceof Error
-            ? error.message
-            : "카메라를 시작할 수 없습니다. 브라우저 설정을 확인해 주세요."
+          "카메라를 초기화하는 중 문제가 발생했습니다. 다시 시도해 주세요."
+        );
+      } else {
+        setCameraError(
+          "카메라를 시작할 수 없습니다. 브라우저 설정을 확인해 주세요."
         );
       }
-    };
+    }
+  }, [handleScanSuccess]);
 
+  useEffect(() => {
     void startScanner();
 
     return () => {
-      active = false;
       void stopScanner();
     };
-  }, [handleScanSuccess, stopScanner]);
+  }, [startScanner, stopScanner]);
 
   const handleClose = async () => {
     await stopScanner();
     onClose();
   };
 
-  if (isScanning && status.type === "idle" && !cameraError) {
-    return (
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
-        <p className="text-center text-sm text-[#fafaf7]/80">
-          Issnuta QR 코드가 프레임 안에 오도록 맞춰 주세요.
-        </p>
-      </div>
-    );
-  }
+  const handleRetry = useCallback(async () => {
+    hasScannedRef.current = false;
+    setStatus({ type: "idle" });
+    setCameraError(null);
+    setIsScanning(false);
+    await stopScanner();
+    await startScanner();
+  }, [startScanner, stopScanner]);
 
   return (
     <div className="fixed inset-0 z-50 bg-[#2d2d28]">
@@ -327,6 +348,7 @@ export function FeedQrScanner({ onClose, onImported }: FeedQrScannerProps) {
         cameraError={cameraError}
         status={status}
         onClose={handleClose}
+        onRetry={handleRetry}
       />
       {isScanning && status.type === "idle" && !cameraError && (
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">

@@ -9,7 +9,7 @@ import {
   stringifyFeedSharePayload,
 } from "@/shared/lib/qrShare";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
-import { Copy, Star, Trash2, X } from "lucide-react";
+import { Copy, QrCode, Scan, Star, Trash2, X, Check } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -397,8 +397,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                   }}
                   className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0]"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
-                    선택
+                  <div
+                    data-icon="선택"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f]"
+                  >
+                    <Check className="h-4 w-4" aria-hidden />
                   </div>
                   <div className="flex-1">
                     <div className="text-[#2d2d28]">선택해서 공유</div>
@@ -415,8 +418,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                     router.push("/feeds/scan");
                   }}
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f] text-xs">
-                    스캔
+                  <div
+                    data-icon="스캔"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f]"
+                  >
+                    <Scan className="h-4 w-4" aria-hidden />
                   </div>
                   <div className="flex-1">
                     <div className="text-[#2d2d28]">QR 코드 스캔</div>
@@ -433,8 +439,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                   }}
                   className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#5a4a3a] px-4 py-3 text-left text-sm text-[#fafaf7] hover:bg-[#4a3a2a] transition-colors"
                 >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fafaf7]/10 text-xs">
-                    전체
+                  <div
+                    data-icon="전체"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fafaf7]/10 text-[#fafaf7]"
+                  >
+                    <QrCode className="h-4 w-4" aria-hidden />
                   </div>
                   <div className="flex-1">
                     <div>전체 히스토리 공유</div>
