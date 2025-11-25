@@ -41,42 +41,38 @@ export default function FeedsPage() {
         {/* Search & Filter */}
         <div className="shrink-0 px-5 pb-4 pt-4 space-y-3">
           {/* Search */}
-          <div className="relative">
-            <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
-              <Search className="h-4 w-4 text-[#9a9a8f]" />
+          {!selectionMode && (
+            <div className="relative">
+              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+                <Search className="h-4 w-4 text-[#9a9a8f]" />
+              </div>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search translations..."
+                className="w-full h-11 pl-11 pr-11 bg-white border border-[#e8e8e0] rounded-xl text-[#2d2d28] placeholder:text-[#9a9a8f] focus:outline-none focus:border-[#5a4a3a] transition-colors"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9a9a8f] hover:text-[#5a4a3a] transition-colors"
+                  aria-label="검색어 지우기"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search translations..."
-              className="w-full h-11 pl-11 pr-11 bg-white border border-[#e8e8e0] rounded-xl text-[#2d2d28] placeholder:text-[#9a9a8f] focus:outline-none focus:border-[#5a4a3a] transition-colors"
-            />
-            {search && (
-              <button
-                type="button"
-                onClick={() => setSearch("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9a9a8f] hover:text-[#5a4a3a] transition-colors"
-                aria-label="검색어 지우기"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
+          )}
 
           {/* Filter Tabs */}
           {selectionMode ? (
             <div className="flex items-center justify-between rounded-xl bg-[#fef9f3] px-3 py-2 text-xs text-[#5a4a3a] border border-[#f5e5d8]">
-              <div className="text-[11px]">
-                선택 모드가 활성화되었습니다. 카드에서 공유할 항목을 선택하세요.
+              <div className="text-[13px]">
+                선택 모드가 활성화되었습니다. 카드를 탭해서 항목을 선택하거나
+                해제할 수 있어요.
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectionMode(false)}
-                className="ml-2 rounded-lg border border-[#e8e8e0] bg-white px-2 py-1 text-[11px] text-[#5a4a3a] hover:bg-[#f5f5f0]"
-              >
-                선택 모드 종료
-              </button>
             </div>
           ) : (
             <div className="flex gap-2">

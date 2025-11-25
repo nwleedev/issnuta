@@ -26,8 +26,10 @@ export function FeedQrCodeDialog({
   isOpen,
   onClose,
   data,
-  title = "Share history",
-  description = "Scan this QR code to import history on another device.",
+  // title = "Share history",
+  // description = "Scan this QR code to import history on another device.",
+  title = "히스토리 공유",
+  description = "다른 기기에서 이 QR 코드를 스캔하면 히스토리를 가져올 수 있어요.",
 }: FeedQrCodeDialogProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -91,8 +93,10 @@ export function FeedQrCodeDialog({
 
           <div className="rounded-xl border border-[#f5e5d8] bg-[#fef9f3] px-3 py-2">
             <p className="text-[11px] leading-relaxed text-[#5a4a3a]">
-              This QR code contains your translation history data. Anyone who
-              scans it can import these translations on their device.
+              {/* This QR code contains your translation history data. Anyone who
+              scans it can import these translations on their device. */}
+              이 QR 코드에는 사용자의 번역 히스토리가 담겨 있습니다. 이 코드를
+              스캔하는 사람은 이 번역들을 자신의 기기로 가져올 수 있어요.
             </p>
           </div>
         </div>
@@ -100,4 +104,3 @@ export function FeedQrCodeDialog({
     </>
   );
 }
-

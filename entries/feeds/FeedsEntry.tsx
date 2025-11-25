@@ -190,11 +190,8 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       <div className="mb-3 flex items-center justify-between text-xs">
         <div className="text-[#6b6b60]">
           {selectionMode ? (
-            <div className="space-y-0.5">
-              <div>선택 모드 · {selectedIds.size}개 선택됨</div>
-              <div className="text-[11px] text-[#9a9a8f]">
-                카드를 탭해서 항목을 선택하거나 해제할 수 있어요.
-              </div>
+            <div className="space-y-0.5 px-0.5">
+              <p className="text-sm">{selectedIds.size}개 선택됨</p>
             </div>
           ) : null}
         </div>
@@ -232,7 +229,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
               </button>
             </>
           )}
-          <button
+          {/* <button
             type="button"
             onClick={handleOpenQrMenu}
             disabled={isLoading || translations.length === 0}
@@ -240,7 +237,7 @@ const FeedsEntry = (props: FeedsEntryProps) => {
           >
             <span aria-hidden>📤</span>
             <span>QR 코드 옵션</span>
-          </button>
+          </button> */}
         </div>
       </div>
       {isLoading ? (
