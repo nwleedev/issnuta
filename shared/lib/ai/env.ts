@@ -62,9 +62,18 @@ function computeJsepBase(): string | null {
  */
 export function configureTransformersEnv(opts: ConfigureOptions = {}): void {
   // Hard guard to prevent accidental SSR import/execution.
-  if (typeof window === "undefined") {
+  // - Browser main thread: window !== undefined
+  // - Web Worker: window === undefined, but self.importScripts exists
+  // - Node/SSR: window === undefined && self/importScripts 모두 없음
+  const isBrowserWindow =
+    typeof window !== "undefined" && typeof document !== "undefined";
+  const isWebWorker =
+    typeof self !== "undefined" && typeof self.importScripts === "function";
+  // importScripts는 Dedicated/Shared Worker에서만 제공되는 전역 함수입니다.
+
+  if (!isBrowserWindow && !isWebWorker) {
     throw new Error(
-      "onnxruntime-web/transformers 환경 구성은 클라이언트에서만 허용됩니다. SSR 경계에서 이 모듈을 import하지 마세요."
+      "onnxruntime-web/transformers 환경 구성은 브라우저(윈도우/웹 워커)에서만 허용됩니다. SSR 경계에서 이 모듈을 import하지 마세요."
     );
   }
   try {
