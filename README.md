@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Issnuta
+
+[한국어](./README.ko.md)
+
+A mobile-first offline translation PWA supporting Korean, English, and Japanese.
+
+<p align="center">
+  <img src="docs/images/screenshot-main.jpg" width="220" alt="Main translator interface">
+  &nbsp;&nbsp;
+  <img src="docs/images/screenshot-feeds.jpg" width="220" alt="Saved translations list">
+  &nbsp;&nbsp;
+  <img src="docs/images/screenshot-selection.jpg" width="220" alt="Selection mode">
+</p>
+<p align="center">
+  <b>Translator</b>&nbsp;&nbsp;·&nbsp;&nbsp;<b>Feeds</b>&nbsp;&nbsp;·&nbsp;&nbsp;<b>Selection</b>
+</p>
+
+Issnuta runs translation models directly in your browser using [Transformers.js](https://huggingface.co/docs/transformers.js) and [ONNX Runtime Web](https://onnxruntime.ai/docs/tutorials/web/), so you can translate text even without an internet connection.
+
+## Features
+
+- **Offline Translation** — Translate between KO↔EN and KO↔JA without network access
+- **PWA Support** — Install on your device and use like a native app
+- **User-Controlled Updates** — Choose when to update the app with a simple dialog
+- **Mobile-First UI** — Optimized for smartphones and touch interactions
+
+## Built With
+
+- [Next.js 15](https://nextjs.org/) (App Router)
+- [React 19](https://react.dev/)
+- [TypeScript](https://www.typescriptlang.org/)
+- [Tailwind CSS 4](https://tailwindcss.com/)
+- [Serwist](https://serwist.pages.dev/) (Service Worker / PWA)
+- [Transformers.js](https://huggingface.co/docs/transformers.js) + [ONNX Runtime Web](https://onnxruntime.ai/)
+- [TanStack Query](https://tanstack.com/query) (Data Fetching / Caching)
+- [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/) (Form Handling)
+- [idb](https://github.com/jakearchibald/idb) (IndexedDB Wrapper)
+- [qrcode](https://github.com/soldair/node-qrcode) (QR Code Generation)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 23 or later
+- [pnpm](https://pnpm.io/)
+
+### Installation
+
+1. Clone the repository
+
+   ```sh
+   git clone https://github.com/nwleedev/issnuta.git
+   cd issnuta
+   ```
+
+2. Install dependencies
+
+   ```sh
+   pnpm install
+   ```
+
+3. Start the development server
+
+   ```sh
+   pnpm dev
+   ```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+### Build for Production
+
+```sh
+pnpm build
+pnpm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Run Tests
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+pnpm test
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Pages
 
-## Learn More
+| Route         | Description                                                         |
+| ------------- | ------------------------------------------------------------------- |
+| `/`           | Main translator interface with language selection and text input    |
+| `/feeds`      | Saved translations list with search, filtering, and QR code sharing |
+| `/feeds/scan` | QR code scanner to import shared translations                       |
+| `/offline`    | Fallback page shown when offline without cached content             |
 
-To learn more about Next.js, take a look at the following resources:
+## Project Structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+app/           → Next.js App Router pages and layouts
+entries/       → Entry points (providers, shared UI wrappers)
+shared/        → Shared utilities and UI components
+  ├── lib/     → Hooks, helpers, and business logic
+  └── ui/      → Reusable UI components
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## How It Works
 
-## Deploy on Vercel
+1. **First Visit** — The app downloads translation models for your selected language pair
+2. **Offline Mode** — Once cached, translations work without internet
+3. **Updates** — When a new version is available, a dialog lets you choose when to update
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License.
