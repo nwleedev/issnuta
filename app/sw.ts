@@ -3,6 +3,7 @@
  * - Caches model/tokenizer/ONNX under `${BASE}/models/**`
  * - Caches ORT runtime files under `${BASE}/wasm/**`
  * - Includes Next defaultCache via @serwist/next/worker
+ * - Falls back to cached responses on 5xx server errors
  */
 
 import { defaultCache } from "@serwist/next/worker";
@@ -67,6 +68,38 @@ function computeJsepBaseURL(): URL | null {
 }
 
 const JSEP_BASE_URL = computeJsepBaseURL();
+
+/**
+ * 5xx 서버 에러 시 캐시된 응답으로 폴백하는 플러그인
+ * - fetchDidSucceed: 5xx 응답 시 에러를 throw하여 handlerDidError 트리거
+ * - handlerDidError: 캐시에서 이전에 저장된 응답 반환
+ */
+const serverErrorFallbackPlugin = {
+  fetchDidSucceed: async ({
+    response,
+    request,
+  }: {
+    response: Response;
+    request: Request;
+  }) => {
+    if (response.status >= 500) {
+      console.warn(
+        `[SW] Server error ${response.status} for ${request.url}, falling back to cache`
+      );
+      throw new Error(`Server error: ${response.status}`);
+    }
+    return response;
+  },
+  handlerDidError: async ({ request }: { request: Request }) => {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) {
+      console.log(`[SW] Serving cached response for ${request.url}`);
+      return cached;
+    }
+    // 캐시에 없으면 null 반환 (setCatchHandler로 위임)
+    return null;
+  },
+};
 
 const runtime = [
   // ORT runtime artifacts (.wasm/.jsep.mjs)
@@ -149,11 +182,15 @@ const fallback = [
     }),
   },
   // HTML/Navigation — online-first with offline fallback
+  // 5xx 서버 에러 시 캐시된 응답으로 폴백
   {
     matcher: /^https?.*/,
     handler: new NetworkFirst({
       cacheName: "offlineCache",
-      plugins: [new ExpirationPlugin({ maxEntries: 200 })],
+      plugins: [
+        new ExpirationPlugin({ maxEntries: 200 }),
+        serverErrorFallbackPlugin,
+      ],
     }),
   },
 ];
@@ -166,10 +203,39 @@ const serwist = new Serwist({
     ignoreURLParametersMatching: [/.*/],
     matchOptions: { ignoreSearch: true },
   },
-  runtimeCaching: [...defaultCache, ...runtime],
+  runtimeCaching: [...defaultCache, ...runtime, ...fallback],
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: false,
+});
+
+/**
+ * 전역 에러 핸들러 — 모든 전략 실패 시 최종 폴백 제공
+ * - handlerDidError가 null을 반환한 경우 (캐시 미스)
+ * - 네트워크 실패 + 캐시 미스
+ */
+serwist.setCatchHandler(async ({ request }) => {
+  const dest = request.destination;
+
+  // HTML 문서 요청 시 오프라인 페이지 반환
+  if (dest === "document") {
+    const cached = await caches.match(request, { ignoreSearch: true });
+    if (cached) return cached;
+
+    // 프리캐시된 오프라인 페이지 반환
+    const offlinePage = await serwist.matchPrecache("/offline");
+    if (offlinePage) return offlinePage;
+
+    console.warn(`[SW] No fallback for document: ${request.url}`);
+  }
+
+  // 스크립트/스타일 요청 시 캐시 반환
+  if (dest === "script" || dest === "style") {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+  }
+
+  return Response.error();
 });
 
 serwist.addEventListeners();
