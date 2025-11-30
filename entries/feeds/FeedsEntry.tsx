@@ -9,7 +9,7 @@ import {
   stringifyFeedSharePayload,
 } from "@/shared/lib/qrShare";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
-import { Copy, QrCode, Scan, Star, Trash2, X, Check } from "lucide-react";
+import { Check, Copy, QrCode, Scan, Star, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -187,28 +187,30 @@ const FeedsEntry = (props: FeedsEntryProps) => {
 
   return (
     <section className="flex-1 px-5 pb-6">
-      <div className="mb-3 flex items-center justify-between text-xs">
+      <div className="mb-3 flex flex-col gap-y-1.5 text-xs px-0.5">
         <div className="text-[#6b6b60]">
           {selectionMode ? (
             <div className="space-y-0.5 px-0.5">
-              <p className="text-sm">{selectedIds.size}개 선택됨</p>
+              <p className="text-[13px] font-semibold">
+                {selectedIds.size}개 선택됨
+              </p>
             </div>
           ) : null}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2.5 justify-between">
           {selectionMode && (
             <>
               <button
                 type="button"
                 onClick={handleSelectAllVisible}
-                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+                className="flex-1 rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
               >
                 전체 선택
               </button>
               <button
                 type="button"
                 onClick={handleClearSelection}
-                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+                className="flex-1 rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
               >
                 선택 해제
               </button>
@@ -216,14 +218,14 @@ const FeedsEntry = (props: FeedsEntryProps) => {
                 type="button"
                 onClick={handleShareSelected}
                 disabled={selectedIds.size === 0}
-                className="rounded-xl border border-[#5a4a3a] bg-[#5a4a3a] px-2 py-1 text-[#fafaf7] hover:bg-[#4a3a2a] disabled:border-[#e8e8e0] disabled:bg-white disabled:text-[#9a9a8f]"
+                className="flex-1 rounded-xl border border-[#5a4a3a] bg-[#5a4a3a] px-2 py-1 text-[#fafaf7] hover:bg-[#4a3a2a] disabled:border-[#e8e8e0] disabled:bg-white disabled:text-[#9a9a8f]"
               >
                 선택 공유
               </button>
               <button
                 type="button"
                 onClick={handleExitSelectionMode}
-                className="rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
+                className="flex-1 rounded-xl border border-[#e8e8e0] bg-white px-2 py-1 text-[#5a4a3a] hover:bg-[#f5f5f0]"
               >
                 완료
               </button>
