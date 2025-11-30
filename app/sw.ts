@@ -57,7 +57,9 @@ function computeJsepBaseURL(): URL | null {
     // 2) ORIGIN + PATHNAME
     if (JSEP_PATHNAME && (JSEP_ORIGIN || ORIGIN)) {
       const origin = (JSEP_ORIGIN || ORIGIN).replace(/\/+$/, "");
-      const path = JSEP_PATHNAME.startsWith("/") ? JSEP_PATHNAME : `/${JSEP_PATHNAME}`;
+      const path = JSEP_PATHNAME.startsWith("/")
+        ? JSEP_PATHNAME
+        : `/${JSEP_PATHNAME}`;
       return new URL(`${origin}${path}`);
     }
     // 폴백: 일반 BASE
@@ -107,8 +109,12 @@ const runtime = [
     matcher: ({ url }: { url: URL }) => {
       const prefixes: string[] = [];
       if (BASE_URL) prefixes.push(`${BASE_URL.href.replace(/\/$/, "")}/wasm/`);
-      if (JSEP_BASE_URL) prefixes.push(`${JSEP_BASE_URL.href.replace(/\/$/, "")}/wasm/`);
-      return prefixes.some((p) => url.href.startsWith(p)) || /\/wasm\//i.test(url.pathname);
+      if (JSEP_BASE_URL)
+        prefixes.push(`${JSEP_BASE_URL.href.replace(/\/$/, "")}/wasm/`);
+      return (
+        prefixes.some((p) => url.href.startsWith(p)) ||
+        /\/wasm\//i.test(url.pathname)
+      );
     },
     handler: new CacheFirst({
       cacheName: "ort-wasm",
@@ -204,8 +210,10 @@ const serwist = new Serwist({
     matchOptions: { ignoreSearch: true },
   },
   runtimeCaching: [...defaultCache, ...runtime, ...fallback],
-  skipWaiting: true,
-  clientsClaim: true,
+  // 사용자 제어 업데이트: 자동 skipWaiting/clientsClaim 비활성화
+  // 새 서비스 워커는 "waiting" 상태로 대기하고, 사용자가 업데이트를 승인하면 활성화
+  skipWaiting: false,
+  clientsClaim: false,
   navigationPreload: false,
 });
 
@@ -239,3 +247,17 @@ serwist.setCatchHandler(async ({ request }) => {
 });
 
 serwist.addEventListeners();
+
+/**
+ * 클라이언트 메시지 핸들러 — 사용자 제어 업데이트 지원
+ * - SKIP_WAITING: 사용자가 업데이트를 승인하면 waiting 상태의 서비스 워커를 활성화
+ * - 오프라인 상태에서 캐시 무효화를 방지하기 위해 사용자 명시적 동의 필요
+ */
+type SkipWaitingMessageEvent = Omit<ExtendableMessageEvent, "data"> & {
+  data: { type: "SKIP_WAITING" };
+};
+self.addEventListener("message", (event: SkipWaitingMessageEvent) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
