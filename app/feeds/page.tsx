@@ -20,8 +20,8 @@ export default function FeedsPage() {
   const [selectionMode, setSelectionMode] = useState(false);
 
   return (
-    <main className="min-h-dvh bg-[#fafaf7]">
-      <div className="mx-auto flex min-h-dvh max-w-screen-sm flex-col">
+    <main className="flex flex-col flex-[1_1_0] px-4 items-center bg-[#fafaf7]">
+      <div className="flex shrink-0 w-full max-w-screen-sm flex-col sticky top-0 z-10">
         <TopAppBar
           title="Feeds"
           subtitle="Saved translations"
@@ -37,7 +37,8 @@ export default function FeedsPage() {
             </Button>
           }
         />
-
+      </div>
+      <div className="flex-[1_1_0] flex w-full max-w-screen-sm flex-col">
         {/* Search & Filter */}
         <div className="shrink-0 px-5 pb-4 pt-4 space-y-3">
           {/* Search */}
