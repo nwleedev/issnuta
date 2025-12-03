@@ -1,27 +1,26 @@
+import { useQueryClient } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, Copy, Star, Trash2, X } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import {
+  translationsKey,
   useDeleteTranslation,
   useLocalTranslations,
   useToggleFavoriteTranslation,
 } from "@/features/feeds/model/useLocalTranslations";
 import { FeedQrCodeDialog } from "@/features/feeds/ui/FeedQrCodeDialog";
 import {
-  buildFeedSharePayload,
-  stringifyFeedSharePayload,
+  buildFeedShareUrl,
+  MAX_QR_SHARE_COUNT,
+  parseFeedShareFromUrl,
 } from "@/shared/lib/qrShare";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
-import { Check, Copy, QrCode, Scan, Star, Trash2, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { importTranslationsFromQr } from "@/shared/storage/translation-store";
 
 export interface FeedsEntryProps {
   search: string;
   filter: "all" | "favorites";
-  /**
-   * QR 옵션 시트 외부 제어용 상태
-   * - 제공되지 않으면 내부에서 로컬 상태로 관리합니다.
-   */
-  isQrMenuOpen?: boolean;
-  onQrMenuOpenChange?: (open: boolean) => void;
   /**
    * 선택 모드 외부 제어용 상태
    * - 제공되지 않으면 내부에서 로컬 상태로 관리합니다.
@@ -30,37 +29,106 @@ export interface FeedsEntryProps {
   onSelectionModeChange: (open: boolean) => void;
 }
 
+type ImportResult = {
+  imported: number;
+  duplicates: number;
+  skipped: number;
+};
+
+type ImportStatus =
+  | { type: "idle" }
+  | { type: "processing" }
+  | { type: "success"; message: string; result: ImportResult }
+  | { type: "error"; message: string };
+
 const FeedsEntry = (props: FeedsEntryProps) => {
-  const {
-    search,
-    filter,
-    isQrMenuOpen,
-    onQrMenuOpenChange,
-    selectionMode,
-    onSelectionModeChange,
-  } = props;
+  const { search, filter, selectionMode, onSelectionModeChange } = props;
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const importProcessedRef = useRef(false);
+
   useEffect(() => {
     void migrateFeedsToIndexedDBOnce();
   }, []);
   const { data: translations = [], isLoading } = useLocalTranslations();
   const deleteMutation = useDeleteTranslation();
   const toggleFavoriteMutation = useToggleFavoriteTranslation();
-  const [internalQrMenuOpen, setInternalQrMenuOpen] = useState(false);
   const [isQrOpen, setIsQrOpen] = useState(false);
   const [qrValue, setQrValue] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(
     () => new Set<string>()
   );
+  const [importStatus, setImportStatus] = useState<ImportStatus>({
+    type: "idle",
+  });
 
-  const qrMenuOpen = isQrMenuOpen ?? internalQrMenuOpen;
+  // Handle import from URL query parameter
+  const handleImportFromUrl = useCallback(
+    async (encodedData: string) => {
+      if (importProcessedRef.current) return;
+      importProcessedRef.current = true;
 
-  const setQrMenuOpen = (open: boolean) => {
-    if (onQrMenuOpenChange) {
-      onQrMenuOpenChange(open);
-      return;
+      setImportStatus({ type: "processing" });
+
+      try {
+        const payload = parseFeedShareFromUrl(encodedData);
+        if (!payload) {
+          setImportStatus({
+            type: "error",
+            message:
+              "QR 코드 데이터를 읽을 수 없습니다. 올바른 Issnuta QR 코드인지 확인해주세요.",
+          });
+          return;
+        }
+
+        const records = payload.data;
+        if (!records.length) {
+          setImportStatus({
+            type: "error",
+            message: "가져올 번역이 없습니다.",
+          });
+          return;
+        }
+
+        const result = await importTranslationsFromQr(records);
+        await queryClient.invalidateQueries({ queryKey: translationsKey });
+
+        if (result.imported === 0) {
+          setImportStatus({
+            type: "error",
+            message: "새 번역이 없습니다. 이미 모든 항목을 가지고 있습니다.",
+          });
+        } else {
+          setImportStatus({
+            type: "success",
+            message: `새 번역 ${result.imported}개를 가져왔어요.`,
+            result,
+          });
+        }
+      } catch {
+        setImportStatus({
+          type: "error",
+          message: "데이터를 처리하는 중 오류가 발생했습니다.",
+        });
+      }
+
+      // Remove import param from URL without reload
+      router.replace("/feeds", { scroll: false });
+    },
+    [queryClient, router]
+  );
+
+  useEffect(() => {
+    const importData = searchParams.get("import");
+    if (importData && !importProcessedRef.current) {
+      void handleImportFromUrl(importData);
     }
-    setInternalQrMenuOpen(open);
+  }, [searchParams, handleImportFromUrl]);
+
+  const handleCloseImportStatus = () => {
+    setImportStatus({ type: "idle" });
+    importProcessedRef.current = false;
   };
 
   const setSelectionMode = (open: boolean) => {
@@ -120,32 +188,8 @@ const FeedsEntry = (props: FeedsEntryProps) => {
     }
   };
 
-  const handleOpenQrMenu = () => {
-    if (isLoading || translations.length === 0) return;
-    setQrMenuOpen(true);
-  };
-
-  const handleCloseQrMenu = () => {
-    setQrMenuOpen(false);
-  };
-
-  const handleOpenQrForAll = () => {
-    if (!translations.length) return;
-    const payload = buildFeedSharePayload(translations);
-    const value = stringifyFeedSharePayload(payload);
-    setQrValue(value);
-    setIsQrOpen(true);
-  };
-
   const handleCloseQr = () => {
     setIsQrOpen(false);
-  };
-
-  const handleEnterSelectionMode = () => {
-    setSelectionMode(true);
-    if (!filteredFeeds.length) {
-      setSelectedIds(new Set<string>());
-    }
   };
 
   const handleExitSelectionMode = () => {
@@ -159,6 +203,10 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       if (next.has(id)) {
         next.delete(id);
       } else {
+        // Limit to MAX_QR_SHARE_COUNT
+        if (next.size >= MAX_QR_SHARE_COUNT) {
+          return prev;
+        }
         next.add(id);
       }
       return next;
@@ -166,7 +214,11 @@ const FeedsEntry = (props: FeedsEntryProps) => {
   };
 
   const handleSelectAllVisible = () => {
-    setSelectedIds(() => new Set<string>(filteredFeeds.map((item) => item.id)));
+    // Select up to MAX_QR_SHARE_COUNT items
+    const idsToSelect = filteredFeeds
+      .slice(0, MAX_QR_SHARE_COUNT)
+      .map((item) => item.id);
+    setSelectedIds(new Set<string>(idsToSelect));
   };
 
   const handleClearSelection = () => {
@@ -179,10 +231,13 @@ const FeedsEntry = (props: FeedsEntryProps) => {
       selectedIds.has(t.id)
     );
     if (selectedTranslations.length === 0) return;
-    const payload = buildFeedSharePayload(selectedTranslations);
-    const value = stringifyFeedSharePayload(payload);
-    setQrValue(value);
-    setIsQrOpen(true);
+    try {
+      const url = buildFeedShareUrl(selectedTranslations);
+      setQrValue(url);
+      setIsQrOpen(true);
+    } catch (err) {
+      // Handle error if URL generation fails
+    }
   };
 
   return (
@@ -192,8 +247,13 @@ const FeedsEntry = (props: FeedsEntryProps) => {
           {selectionMode ? (
             <div className="space-y-0.5 px-0.5">
               <p className="text-[13px] font-semibold">
-                {selectedIds.size}개 선택됨
+                {selectedIds.size}/{MAX_QR_SHARE_COUNT}개 선택됨
               </p>
+              {selectedIds.size >= MAX_QR_SHARE_COUNT && (
+                <p className="text-[11px] text-[#c87941]">
+                  최대 {MAX_QR_SHARE_COUNT}개까지 선택할 수 있습니다
+                </p>
+              )}
             </div>
           ) : null}
         </div>
@@ -231,15 +291,6 @@ const FeedsEntry = (props: FeedsEntryProps) => {
               </button>
             </>
           )}
-          {/* <button
-            type="button"
-            onClick={handleOpenQrMenu}
-            disabled={isLoading || translations.length === 0}
-            className="inline-flex items-center gap-1 rounded-xl border border-[#e8e8e0] bg-white px-3 py-1.5 text-[11px] text-[#5a4a3a] shadow-sm hover:bg-[#f5f5f0] disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-          >
-            <span aria-hidden>📤</span>
-            <span>QR 코드 옵션</span>
-          </button> */}
         </div>
       </div>
       {isLoading ? (
@@ -363,102 +414,75 @@ const FeedsEntry = (props: FeedsEntryProps) => {
           ))}
         </ul>
       )}
-      {qrMenuOpen && (
+
+      {/* Import Result Modal */}
+      {importStatus.type !== "idle" && importStatus.type !== "processing" && (
         <>
           <div
             className="fixed inset-0 z-40 bg-black/40"
-            onClick={handleCloseQrMenu}
+            onClick={handleCloseImportStatus}
             aria-hidden="true"
           />
-          <div className="fixed inset-x-0 bottom-0 z-50 px-4 pb-6">
-            <div className="mx-auto max-w-screen-sm overflow-hidden rounded-2xl border border-[#e8e8e0] bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-[#e8e8e0] px-4 py-3">
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+            <div className="relative w-full max-w-sm rounded-2xl border border-white/60 bg-white/95 p-6 shadow-2xl backdrop-blur-xl">
+              <button
+                type="button"
+                onClick={handleCloseImportStatus}
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-xl border border-[#e8e8e0] bg-white/70 text-[#5a4a3a] hover:bg-[#f5f5f0] focus:outline-none"
+                aria-label="닫기"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="mb-4 flex items-start gap-3 pr-10">
+                {importStatus.type === "success" ? (
+                  <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-[#4a7c59]" />
+                ) : (
+                  <AlertCircle className="mt-0.5 h-6 w-6 shrink-0 text-[#c87941]" />
+                )}
                 <div>
-                  <h2 className="text-sm font-semibold text-[#2d2d28]">
-                    QR 코드 옵션
-                  </h2>
-                  <p className="mt-0.5 text-xs text-[#6b6b60]">
-                    히스토리를 공유하거나 다른 기기에서 가져옵니다.
+                  <h3 className="mb-1 text-base font-semibold text-[#2d2d28]">
+                    {importStatus.type === "success"
+                      ? "가져오기 완료"
+                      : "가져오기 실패"}
+                  </h3>
+                  <p className="text-sm text-[#6b6b60]">
+                    {importStatus.message}
                   </p>
+                  {importStatus.type === "success" && importStatus.result && (
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                      {importStatus.result.imported > 0 && (
+                        <span className="rounded-lg bg-[#4a7c59]/10 px-2 py-1 text-[#4a7c59]">
+                          {importStatus.result.imported}개 가져옴
+                        </span>
+                      )}
+                      {importStatus.result.duplicates > 0 && (
+                        <span className="rounded-lg bg-[#6b6b60]/10 px-2 py-1 text-[#6b6b60]">
+                          {importStatus.result.duplicates}개 중복
+                        </span>
+                      )}
+                      {importStatus.result.skipped > 0 && (
+                        <span className="rounded-lg bg-[#6b6b60]/10 px-2 py-1 text-[#6b6b60]">
+                          {importStatus.result.skipped}개 건너뜀
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleCloseQrMenu}
-                  className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#f5f5f0] text-[#6b6b60] focus:outline-none"
-                  aria-label="QR 옵션 닫기"
-                >
-                  <X className="h-4 w-4" />
-                </button>
               </div>
-              <div className="p-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleCloseQrMenu();
-                    handleEnterSelectionMode();
-                  }}
-                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0]"
-                >
-                  <div
-                    data-icon="선택"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f]"
-                  >
-                    <Check className="h-4 w-4" aria-hidden />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[#2d2d28]">선택해서 공유</div>
-                    <div className="mt-0.5 text-xs text-[#9a9a8f]">
-                      여러 항목을 골라 QR로 공유
-                    </div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  className="mt-1 flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm text-[#6b6b60] hover:bg-[#f5f5f0] disabled:text-[#9a9a8f]"
-                  onClick={() => {
-                    handleCloseQrMenu();
-                    router.push("/feeds/scan");
-                  }}
-                >
-                  <div
-                    data-icon="스캔"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fef9f3] text-[#c17a4f]"
-                  >
-                    <Scan className="h-4 w-4" aria-hidden />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-[#2d2d28]">QR 코드 스캔</div>
-                    <div className="mt-0.5 text-xs text-[#9a9a8f]">
-                      다른 기기에서 생성한 QR을 스캔 (준비 중)
-                    </div>
-                  </div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleCloseQrMenu();
-                    handleOpenQrForAll();
-                  }}
-                  className="mt-2 flex w-full items-center gap-3 rounded-xl bg-[#5a4a3a] px-4 py-3 text-left text-sm text-[#fafaf7] hover:bg-[#4a3a2a] transition-colors"
-                >
-                  <div
-                    data-icon="전체"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fafaf7]/10 text-[#fafaf7]"
-                  >
-                    <QrCode className="h-4 w-4" aria-hidden />
-                  </div>
-                  <div className="flex-1">
-                    <div>전체 히스토리 공유</div>
-                    <div className="mt-0.5 text-xs text-[#f5f5f0]/80">
-                      현재 기기의 모든 히스토리를 하나의 QR로 공유
-                    </div>
-                  </div>
-                </button>
-              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseImportStatus}
+                className="w-full h-11 rounded-xl bg-[#5a4a3a] text-sm text-[#fafaf7] hover:bg-[#4a3a2a] transition-colors"
+              >
+                확인
+              </button>
             </div>
           </div>
         </>
       )}
+
       <FeedQrCodeDialog
         isOpen={isQrOpen && !!qrValue}
         onClose={handleCloseQr}

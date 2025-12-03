@@ -1,4 +1,18 @@
+import pako from "pako";
+
 import type { SavedTranslation } from "@/shared/model/translation";
+
+/** Maximum number of translations that can be shared via QR URL */
+export const MAX_QR_SHARE_COUNT = 10;
+
+/** App domain for QR code URLs (from environment variable) */
+function getAppDomain(): string {
+  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
+  if (!domain) {
+    throw new Error("NEXT_PUBLIC_APP_DOMAIN environment variable is not set");
+  }
+  return domain;
+}
 
 /**
  * QR 코드에 담길 피드 공유 페이로드 v1
@@ -94,5 +108,69 @@ function isFeedSharePayloadV1(value: unknown): value is FeedSharePayloadV1 {
   }
 
   return true;
+}
+
+// ============================================================
+// URL-based QR code sharing (for native camera app scanning)
+// ============================================================
+
+/**
+ * Encode binary data to URL-safe base64
+ */
+function base64UrlEncode(data: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...data));
+  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+/**
+ * Decode URL-safe base64 to binary data
+ */
+function base64UrlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  return Uint8Array.from(binary, (c) => c.charCodeAt(0));
+}
+
+/**
+ * Build a shareable URL containing compressed translation data.
+ * The URL can be encoded into a QR code for native camera scanning.
+ *
+ * @param translations - Array of translations to share (max 10)
+ * @returns Full URL string for QR code
+ * @throws Error if translations exceed MAX_QR_SHARE_COUNT
+ */
+export function buildFeedShareUrl(translations: SavedTranslation[]): string {
+  if (translations.length > MAX_QR_SHARE_COUNT) {
+    throw new Error(
+      `Cannot share more than ${MAX_QR_SHARE_COUNT} translations at once`
+    );
+  }
+
+  const payload = buildFeedSharePayload(translations);
+  const json = JSON.stringify(payload);
+  const compressed = pako.deflate(json);
+  const encoded = base64UrlEncode(compressed);
+
+  const domain = getAppDomain();
+  return `${domain}/feeds?import=${encoded}`;
+}
+
+/**
+ * Parse and decompress translation data from URL parameter.
+ *
+ * @param encodedData - The 'd' query parameter value from the import URL
+ * @returns Parsed payload or null if invalid
+ */
+export function parseFeedShareFromUrl(
+  encodedData: string
+): FeedSharePayloadV1 | null {
+  try {
+    const compressed = base64UrlDecode(encodedData);
+    const json = pako.inflate(compressed, { to: "string" });
+    return parseFeedSharePayload(json);
+  } catch {
+    return null;
+  }
 }
 
