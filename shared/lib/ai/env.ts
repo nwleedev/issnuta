@@ -16,7 +16,7 @@ export type ConfigureOptions = {
 
   // 원격 버킷(B안) 설정
   /**
-   * 원격 버킷의 베이스 URL. 예) 'http://localhost:5500/v0.0.1'
+   * 원격 버킷의 베이스 URL.
    * - 모델:   `${BASE}/models/{model}/...`
    * - ORT WASM: `${BASE}/wasm/ort-wasm*.wasm` 및 `*.jsep.mjs`
    */
@@ -37,13 +37,7 @@ export type ConfigureOptions = {
 
 function computeJsepBase(): string | null {
   try {
-    // 1) Absolute URL via NEXT_PUBLIC_JSEP_URL
-    const jsepUrl = (process.env.NEXT_PUBLIC_JSEP_URL ?? "").trim();
-    if (jsepUrl && /^https?:\/\//i.test(jsepUrl)) {
-      return jsepUrl.replace(/\/+$/, "");
-    }
-
-    // 2) ORIGIN + PATHNAME
+    // NEXT_PUBLIC_JSEP_ORIGIN + NEXT_PUBLIC_JSEP_PATHNAME 조합
     const jsepPathname = (process.env.NEXT_PUBLIC_JSEP_PATHNAME ?? "").trim();
     const jsepOrigin = (process.env.NEXT_PUBLIC_JSEP_ORIGIN ?? "").trim();
     if (jsepPathname && jsepOrigin) {

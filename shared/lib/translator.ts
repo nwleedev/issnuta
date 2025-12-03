@@ -24,8 +24,6 @@ export class PrefetchRequiredError extends Error {
 
 function computeBaseURL(): string | null {
   try {
-    const direct = (process.env.NEXT_PUBLIC_TRANSLATIONS_BASE ?? "").trim();
-    if (direct) return direct.replace(/\/+$/, "");
     const origin = (process.env.NEXT_PUBLIC_STORAGE_ORIGIN ?? "").trim();
     const base = (process.env.NEXT_PUBLIC_STORAGE_BASE ?? "").trim();
     if (origin && base) {

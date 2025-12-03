@@ -60,20 +60,16 @@ function suggestNumThreadsForWorker(): number {
 async function ensureInitialized(): Promise<void> {
   if (initialized && pipelinePromise) return;
 
-  // 번역 버킷 BASE 구성은 shared/lib/translator.ts의 ensureTranslatorLoaded 로직과 동일한 env 조합을 사용합니다.
-  const directBase = process.env.NEXT_PUBLIC_TRANSLATIONS_BASE;
+  // 번역 버킷 BASE 구성: NEXT_PUBLIC_STORAGE_ORIGIN + NEXT_PUBLIC_STORAGE_BASE 조합
   const origin = process.env.NEXT_PUBLIC_STORAGE_ORIGIN;
   const basePath = process.env.NEXT_PUBLIC_STORAGE_BASE;
 
-  let combinedBase: string | undefined;
+  let base: string | undefined;
   if (origin && basePath) {
     const o = origin.replace(/\/+$/, "");
     const p = basePath.startsWith("/") ? basePath : `/${basePath}`;
-    combinedBase = `${o}${p}`;
+    base = `${o}${p}`;
   }
-
-  const base =
-    directBase && directBase.length > 0 ? directBase : combinedBase;
 
   if (base && base.length > 0) {
     // 원격 버킷(B안)

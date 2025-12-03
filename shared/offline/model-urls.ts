@@ -1,7 +1,7 @@
 /**
  * 모델/ORT 아티팩트 URL 유틸리티 (shared 레이어)
  *
- * - BASE 계산: NEXT_PUBLIC_TRANSLATIONS_BASE 우선, 없으면 ORIGIN+BASE 조합
+ * - BASE 계산: NEXT_PUBLIC_STORAGE_ORIGIN + NEXT_PUBLIC_STORAGE_BASE 조합
  * - ORT(.wasm/.jsep.mjs) 및 모델 아티팩트(Tokenizer/ONNX) 경로 구성
  * - Service Worker 및 features/offline 쪽에서 동일한 경로 체계를 재사용할 수 있도록
  *   shared 레이어로 승격된 공통 모듈입니다.
@@ -25,13 +25,9 @@ export type BuildAllOptions = BuildOrtOptions & BuildModelOptions;
 
 /**
  * BASE URL 계산
- * - 우선순위: NEXT_PUBLIC_TRANSLATIONS_BASE > (NEXT_PUBLIC_STORAGE_ORIGIN + NEXT_PUBLIC_STORAGE_BASE)
- * - 반환 예: "http://localhost:5500/v0.0.1"
+ * - NEXT_PUBLIC_STORAGE_ORIGIN + NEXT_PUBLIC_STORAGE_BASE 조합
  */
 export function getBaseURL(): string {
-  const direct = (process.env.NEXT_PUBLIC_TRANSLATIONS_BASE ?? "").trim();
-  if (direct) return stripTrailingSlash(direct);
-
   const origin = (process.env.NEXT_PUBLIC_STORAGE_ORIGIN ?? "").trim();
   const base = (process.env.NEXT_PUBLIC_STORAGE_BASE ?? "").trim();
   if (origin && base) {
@@ -40,23 +36,17 @@ export function getBaseURL(): string {
     return stripTrailingSlash(`${o}${p}`);
   }
   throw new Error(
-    "프리페치 BASE를 계산할 수 없습니다. NEXT_PUBLIC_TRANSLATIONS_BASE 또는 NEXT_PUBLIC_STORAGE_ORIGIN/NEXT_PUBLIC_STORAGE_BASE를 설정하세요."
+    "NEXT_PUBLIC_STORAGE_ORIGIN 및 NEXT_PUBLIC_STORAGE_BASE를 설정하세요."
   );
 }
 
 /**
  * ORT(JSEP/wasm) 전용 BASE URL 계산
- * - 우선순위: NEXT_PUBLIC_JSEP_URL(절대) > (NEXT_PUBLIC_JSEP_ORIGIN + NEXT_PUBLIC_JSEP_PATHNAME)
- * - 미설정 시 getBaseURL()로 폴백
+ * - NEXT_PUBLIC_JSEP_ORIGIN + NEXT_PUBLIC_JSEP_PATHNAME 조합
+ * - JSEP_ORIGIN 미설정 시 STORAGE_ORIGIN으로 폴백
+ * - 전체 미설정 시 getBaseURL()로 폴백
  */
 export function getWasmBaseURL(): string {
-  // 1) Absolute URL via NEXT_PUBLIC_JSEP_URL
-  const jsepUrl = (process.env.NEXT_PUBLIC_JSEP_URL ?? "").trim();
-  if (jsepUrl && /^https?:\/\//i.test(jsepUrl)) {
-    return stripTrailingSlash(jsepUrl);
-  }
-
-  // 2) ORIGIN + PATHNAME
   const jsepPathname = (process.env.NEXT_PUBLIC_JSEP_PATHNAME ?? "").trim();
   const jsepOrigin =
     (process.env.NEXT_PUBLIC_JSEP_ORIGIN ?? "").trim() ||
@@ -93,30 +83,6 @@ export function buildOrtURLs(
     `${base}/wasm/ort-wasm-simd-threaded.mjs`
   );
 
-  // 기본 simd 세트
-  // files.push(
-  //   `${base}/wasm/ort-wasm-simd.wasm`,
-  //   `${base}/wasm/ort-wasm-simd.jsep.mjs`
-  // );
-
-  // if (opts.includeFallback) {
-  //   files.push(
-  //     `${base}/wasm/ort-wasm.wasm`,
-  //     `${base}/wasm/ort-wasm.jsep.mjs`
-  //   );
-  // }
-  // if (opts.includeThreaded) {
-  //   files.push(
-  //     `${base}/wasm/ort-wasm-simd-threaded.wasm`,
-  //     `${base}/wasm/ort-wasm-simd-threaded.jsep.mjs`
-  //   );
-  //   if (opts.includeFallback) {
-  //     files.push(
-  //       `${base}/wasm/ort-wasm-threaded.wasm`,
-  //       `${base}/wasm/ort-wasm-threaded.jsep.mjs`
-  //     );
-  //   }
-  // }
   return unique(files);
 }
 
@@ -182,4 +148,3 @@ function stripTrailingSlash(s: string): string {
 function unique<T>(arr: T[]): T[] {
   return Array.from(new Set(arr));
 }
-

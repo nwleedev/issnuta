@@ -24,18 +24,15 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
-// Compute BASE from env — prefer single var, otherwise compose from ORIGIN + BASE.
-const DIRECT_BASE = (process.env.NEXT_PUBLIC_TRANSLATIONS_BASE ?? "").trim();
+// Compute BASE from env — compose from ORIGIN + BASE.
 const ORIGIN = (process.env.NEXT_PUBLIC_STORAGE_ORIGIN ?? "").trim();
 const BASE_PATH = (process.env.NEXT_PUBLIC_STORAGE_BASE ?? "").trim();
 
 const JSEP_ORIGIN = (process.env.NEXT_PUBLIC_JSEP_ORIGIN ?? "").trim();
-const JSEP_URL = (process.env.NEXT_PUBLIC_JSEP_URL ?? "").trim();
 const JSEP_PATHNAME = (process.env.NEXT_PUBLIC_JSEP_PATHNAME ?? "").trim();
 
 function computeBaseURL(): URL | null {
   try {
-    if (DIRECT_BASE) return new URL(DIRECT_BASE);
     if (ORIGIN && BASE_PATH) {
       const origin = ORIGIN.replace(/\/+$/, "");
       const base = BASE_PATH.startsWith("/") ? BASE_PATH : `/${BASE_PATH}`;
@@ -51,10 +48,7 @@ const BASE_URL = computeBaseURL();
 
 function computeJsepBaseURL(): URL | null {
   try {
-    // 1) Absolute URL via JSEP_URL
-    if (JSEP_URL && /^https?:\/\//i.test(JSEP_URL)) return new URL(JSEP_URL);
-
-    // 2) ORIGIN + PATHNAME
+    // JSEP_ORIGIN + JSEP_PATHNAME 조합 (JSEP_ORIGIN 미설정 시 ORIGIN 폴백)
     if (JSEP_PATHNAME && (JSEP_ORIGIN || ORIGIN)) {
       const origin = (JSEP_ORIGIN || ORIGIN).replace(/\/+$/, "");
       const path = JSEP_PATHNAME.startsWith("/")
