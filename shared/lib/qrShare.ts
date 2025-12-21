@@ -64,32 +64,52 @@ export function parseFeedSharePayload(
   return parsed;
 }
 
+/**
+ * v1 레코드 검증
+ */
+function isV1Record(record: Record<string, unknown>): boolean {
+  if (record.direction !== "koja" && record.direction !== "jako") {
+    return false;
+  }
+  if (typeof record.outputs !== "object" || record.outputs === null) {
+    return false;
+  }
+  const outputs = record.outputs as Record<string, unknown>;
+  if (
+    typeof outputs.ko !== "string" ||
+    typeof outputs.ja !== "string" ||
+    typeof outputs.en !== "string"
+  ) {
+    return false;
+  }
+  return record.version === 1;
+}
+
+/**
+ * v2 레코드 검증
+ */
+function isV2Record(record: Record<string, unknown>): boolean {
+  if (typeof record.srcLang !== "string") return false;
+  if (typeof record.tgtLang !== "string") return false;
+  if (typeof record.output !== "string") return false;
+  return record.version === 2;
+}
+
 function isSavedTranslationArray(value: unknown): value is SavedTranslation[] {
   if (!Array.isArray(value)) return false;
 
   return value.every((item) => {
     if (typeof item !== "object" || item === null) return false;
-    const record = item as Partial<SavedTranslation>;
+    const record = item as Record<string, unknown>;
+
+    // 공통 필드 검증
     if (typeof record.id !== "string") return false;
     if (typeof record.createdAt !== "number") return false;
-    if (record.direction !== "koja" && record.direction !== "jako") {
-      return false;
-    }
     if (typeof record.input !== "string") return false;
-    if (typeof record.outputs !== "object" || record.outputs === null) {
-      return false;
-    }
-    const outputs = record.outputs as SavedTranslation["outputs"];
-    if (
-      typeof outputs.ko !== "string" ||
-      typeof outputs.ja !== "string" ||
-      typeof outputs.en !== "string"
-    ) {
-      return false;
-    }
     if (typeof record.version !== "number") return false;
 
-    return true;
+    // v1 또는 v2 레코드 검증
+    return isV1Record(record) || isV2Record(record);
   });
 }
 

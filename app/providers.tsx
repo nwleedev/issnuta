@@ -1,5 +1,6 @@
 "use client";
 
+import { DbMigrationProvider } from "@/entries/providers/DbMigrationProvider";
 import { ServiceWorkerProvider } from "@/entries/providers/ServiceWorkerProvider";
 import { getQueryClient } from "@/shared/lib/query/client";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -14,7 +15,9 @@ export function AppProviders({ children }: AppProvidersProps) {
 
   return (
     <QueryClientProvider client={client}>
-      <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
+      <DbMigrationProvider>
+        <ServiceWorkerProvider>{children}</ServiceWorkerProvider>
+      </DbMigrationProvider>
     </QueryClientProvider>
   );
 }

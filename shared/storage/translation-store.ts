@@ -1,7 +1,6 @@
 import type {
   SavedTranslation,
-  TranslationDirection,
-  TranslationOutputs,
+  SavedTranslationV2,
 } from "@/shared/model/translation";
 import { getDB } from "@/shared/storage/issnuta-db";
 import { nanoid } from "nanoid";
@@ -10,19 +9,26 @@ function createId(): string {
   return nanoid();
 }
 
-export async function saveTranslationToDB(params: {
+/**
+ * v2 형식으로 번역 저장 (NLLB 코드 기반)
+ */
+export async function saveTranslationV2ToDB(params: {
   input: string;
-  direction: TranslationDirection;
-  outputs: TranslationOutputs;
-}): Promise<SavedTranslation> {
+  srcLang: string;
+  tgtLang: string;
+  output: string;
+  crossCheck?: string;
+}): Promise<SavedTranslationV2> {
   const db = await getDB();
-  const record: SavedTranslation = {
+  const record: SavedTranslationV2 = {
     id: createId(),
     createdAt: Date.now(),
-    direction: params.direction,
     input: params.input,
-    outputs: params.outputs,
-    version: 1,
+    srcLang: params.srcLang,
+    tgtLang: params.tgtLang,
+    output: params.output,
+    crossCheck: params.crossCheck,
+    version: 2,
   };
   await db.put("translations", record);
   return record;
