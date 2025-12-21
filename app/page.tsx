@@ -1,4 +1,4 @@
-import TranslatorLoader from "@/entries/ui/TranslatorLoader";
+import UniversalTranslatorLoader from "@/entries/ui/UniversalTranslatorLoader";
 import OfflinePrefetchButton from "@/features/offline/ui/OfflinePrefetchButton";
 import TopAppBar from "@/features/shell/ui/TopAppBar";
 
@@ -16,7 +16,7 @@ export default function Page() {
             </div>
           </div>
 
-          <TranslatorLoader />
+          <UniversalTranslatorLoader />
         </section>
       </div>
     </main>

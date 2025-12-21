@@ -66,10 +66,10 @@
     - `features/offline/useOfflineModelReady.ts`: 오프라인 준비 상태 판별 로직 정리
 
 - **핵심 번역 UI / 위젯 (`widgets/`, `features/translate/`)**
-  - 예: `widgets/translator/ui/TranslatorPanel.tsx`, `features/translate/ui/LocalNLLBTranslator.tsx`, `features/translate/ui/LocalTranslatorActionRow.tsx`, `features/translate/ui/LocalTranslatorOfflineSetup.tsx`
+  - 예: `widgets/translator/ui/UniversalTranslatorPanel.tsx`, `features/translate/ui/UniversalTranslator.tsx`, `features/translate/model/useUniversalTranslator.ts`, `features/translate/ui/LanguagePairSelector.tsx`
   - 작업 예시
-    - `widgets/translator/ui/TranslatorPanel.tsx`: 모바일 번역 패널 레이아웃/상호작용 정리
-    - `features/translate/ui/LocalTranslatorActionRow.tsx`: 버튼/상태/툴팁을 모바일 디자인 가이드에 맞게 개선
+    - `widgets/translator/ui/UniversalTranslatorPanel.tsx`: 16개 언어 지원 번역 패널 레이아웃/상호작용 정리
+    - `features/translate/ui/UniversalTranslator.tsx`: 번역 UI 컴포넌트 구조/접근성 개선
 
 - **셸/내비게이션/상태 표시 (`features/shell/`, `features/status/`, `features/sheet/`)**
   - 예: `features/shell/ui/TopAppBar.tsx`, `features/shell/ui/BottomNav.tsx`, `features/status/ui/RuntimeBadge.tsx`, `features/sheet/ui/BottomSheet.tsx`
@@ -120,8 +120,8 @@
 예를 들어, 번역 파이프라인 전체를 보고 싶다면 다음과 같이 나눕니다.
 
 1. `shared/lib/translator.ts` 설계 리뷰
-2. `features/translate/ui/LocalNLLBTranslator.tsx` 설계/UX 리뷰
-3. `widgets/translator/ui/TranslatorPanel.tsx` 설계/UX 리뷰
+2. `features/translate/ui/UniversalTranslator.tsx` 설계/UX 리뷰
+3. `widgets/translator/ui/UniversalTranslatorPanel.tsx` 설계/UX 리뷰
 
 각 단계는 독립된 Codex 작업(하나의 파일)으로 요청합니다.
 

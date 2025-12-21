@@ -1,27 +1,22 @@
 "use client";
 
-import LocalNLLBTranslator, {
-  type LocalTranslatorActionsParams,
-} from "@/features/translate/ui/LocalNLLBTranslator";
+import UniversalTranslator, {
+  type UniversalTranslatorActionsParams,
+} from "@/features/translate/ui/UniversalTranslator";
+import SaveTranslationV2Button from "@/features/feeds/ui/SaveTranslationV2Button";
 import OfflineSetup from "@/features/offline/ui/OfflineSetup";
 import { NLLB_MODEL_ID } from "@/shared/lib/translator";
 import { Button } from "@/shared/ui/button";
-import dynamic from "next/dynamic";
 import { RotateCcw } from "lucide-react";
-import { Fragment, useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
-const SaveTranslationButton = dynamic(
-  () =>
-    import("@/features/feeds/ui/SaveTranslationButton").then(
-      (m) => m.default
-    ),
-  {
-    ssr: false,
-    loading: () => <Fragment />,
-  }
-);
-
-export default function TranslatorPanel() {
+/**
+ * UniversalTranslatorPanel
+ *
+ * - UniversalTranslator 위젯 + 오프라인 설정 팝업
+ * - 16개 언어 지원
+ */
+export default function UniversalTranslatorPanel() {
   const [offlineOpen, setOfflineOpen] = useState(false);
   const offlineRetryRef = useRef<null | (() => Promise<void>)>(null);
 
@@ -38,7 +33,7 @@ export default function TranslatorPanel() {
       try {
         await retry();
       } catch {
-        // 번역 재시도 실패는 내부 LocalNLLBTranslator가 처리합니다.
+        // 번역 재시도 실패는 내부 UniversalTranslator가 처리합니다.
       }
     }
   }, []);
@@ -51,17 +46,21 @@ export default function TranslatorPanel() {
   const renderActions = useCallback(
     ({
       input,
-      direction,
-      outputs,
+      srcLang,
+      tgtLang,
+      output,
+      crossCheck,
       slow,
       isTranslating,
-    }: LocalTranslatorActionsParams) => (
+    }: UniversalTranslatorActionsParams) => (
       <>
-        <SaveTranslationButton
-          key={input}
+        <SaveTranslationV2Button
+          key={`${input}-${output}`}
           input={input}
-          direction={direction}
-          outputs={outputs}
+          srcLang={srcLang}
+          tgtLang={tgtLang}
+          output={output}
+          crossCheck={crossCheck}
           className="h-11 px-4 rounded-xl"
         />
         <span
@@ -92,7 +91,7 @@ export default function TranslatorPanel() {
 
   return (
     <>
-      <LocalNLLBTranslator
+      <UniversalTranslator
         renderActions={renderActions}
         onOfflineRequired={handleOfflineRequired}
       />
@@ -107,4 +106,3 @@ export default function TranslatorPanel() {
     </>
   );
 }
-

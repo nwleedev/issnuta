@@ -15,8 +15,14 @@ import {
   MAX_QR_SHARE_COUNT,
   parseFeedShareFromUrl,
 } from "@/shared/lib/qrShare";
+import {
+  getLanguagePair,
+  getTranslationOutput,
+  getCrossCheck,
+} from "@/shared/model/translation";
 import { migrateFeedsToIndexedDBOnce } from "@/shared/storage/translation-migration";
 import { importTranslationsFromQr } from "@/shared/storage/translation-store";
+import { toUiCode } from "@/shared/config/supported-languages";
 
 export interface FeedsEntryProps {
   search: string;
@@ -137,16 +143,21 @@ const FeedsEntry = (props: FeedsEntryProps) => {
 
   const feeds = useMemo(
     () =>
-      translations.map((t) => ({
-        id: t.id,
-        input: t.input,
-        primary: t.direction === "koja" ? t.outputs.ja : t.outputs.ko,
-        crossCheck: t.direction === "koja" ? t.outputs.en : undefined,
-        fromLang: t.direction === "koja" ? "ko" : "ja",
-        toLang: t.direction === "koja" ? "ja" : "ko",
-        createdAt: t.createdAt,
-        isFavorite: t.isFavorite ?? false,
-      })),
+      translations.map((t) => {
+        const { srcLang, tgtLang } = getLanguagePair(t);
+        const fromLang = toUiCode(srcLang) ?? "ko";
+        const toLang = toUiCode(tgtLang) ?? "ja";
+        return {
+          id: t.id,
+          input: t.input,
+          primary: getTranslationOutput(t),
+          crossCheck: getCrossCheck(t),
+          fromLang,
+          toLang,
+          createdAt: t.createdAt,
+          isFavorite: t.isFavorite ?? false,
+        };
+      }),
     [translations]
   );
 

@@ -1,17 +1,13 @@
 "use client";
 
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
 import type { SavedTranslation } from "@/shared/model/translation";
 import {
   deleteTranslationFromDB,
-  saveTranslationToDB,
   listTranslationsFromDB,
+  saveTranslationV2ToDB,
   updateTranslationFavorite,
 } from "@/shared/storage/translation-store";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export const translationsKey = ["local-translations"] as const;
 
@@ -20,24 +16,19 @@ export function useLocalTranslations() {
     queryKey: translationsKey,
     queryFn: listTranslationsFromDB,
     enabled: typeof window !== "undefined",
+    refetchOnMount: "always",
   });
 }
 
-export function useSaveTranslation() {
+/**
+ * v2 형식으로 번역 저장 (NLLB 코드 기반)
+ */
+export function useSaveTranslationV2() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: saveTranslationToDB,
+    mutationFn: saveTranslationV2ToDB,
     onSuccess(saved) {
-      queryClient.setQueryData<SavedTranslation[] | undefined>(
-        translationsKey,
-        (prev) => {
-          if (!prev || prev.length === 0) {
-            return [saved];
-          }
-          // 최신 항목을 앞에 추가합니다.
-          return [saved, ...prev];
-        }
-      );
+      queryClient.invalidateQueries({ queryKey: translationsKey });
     },
   });
 }
@@ -47,13 +38,7 @@ export function useDeleteTranslation() {
   return useMutation({
     mutationFn: deleteTranslationFromDB,
     onSuccess(_data, id) {
-      queryClient.setQueryData<SavedTranslation[] | undefined>(
-        translationsKey,
-        (prev) => {
-          if (!prev) return prev;
-          return prev.filter((item) => item.id !== id);
-        }
-      );
+      queryClient.invalidateQueries({ queryKey: translationsKey });
     },
   });
 }
@@ -63,16 +48,7 @@ export function useToggleFavoriteTranslation() {
   return useMutation({
     mutationFn: updateTranslationFavorite,
     onSuccess(updated) {
-      if (!updated) return;
-      queryClient.setQueryData<SavedTranslation[] | undefined>(
-        translationsKey,
-        (prev) => {
-          if (!prev) return prev;
-          return prev.map((item) =>
-            item.id === updated.id ? updated : item
-          );
-        }
-      );
+      queryClient.invalidateQueries({ queryKey: translationsKey });
     },
   });
 }
