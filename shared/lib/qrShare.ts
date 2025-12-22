@@ -7,9 +7,16 @@ export const MAX_QR_SHARE_COUNT = 10;
 
 /** App domain for QR code URLs (from environment variable) */
 function getAppDomain(): string {
-  const domain = process.env.NEXT_PUBLIC_APP_DOMAIN;
-  if (!domain) {
-    throw new Error("NEXT_PUBLIC_APP_DOMAIN environment variable is not set");
+  const origin = window.location.origin;
+  const domains = process.env.NEXT_PUBLIC_APP_DOMAINS?.split(",") ?? [];
+  if (domains.length === 0) {
+    throw new Error("NEXT_PUBLIC_APP_DOMAINS environment variable is not set");
+  }
+  const domain = domains.find(
+    (domain) => new URL(domain).origin === new URL(origin).origin
+  );
+  if (typeof domain === "undefined") {
+    return domains[0] as string;
   }
   return domain;
 }
@@ -47,9 +54,7 @@ export function stringifyFeedSharePayload(payload: FeedSharePayloadV1): string {
   return JSON.stringify(payload);
 }
 
-export function parseFeedSharePayload(
-  raw: string
-): FeedSharePayloadV1 | null {
+export function parseFeedSharePayload(raw: string): FeedSharePayloadV1 | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -193,4 +198,3 @@ export function parseFeedShareFromUrl(
     return null;
   }
 }
-
